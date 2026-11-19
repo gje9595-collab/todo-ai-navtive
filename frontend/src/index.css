@@ -1,0 +1,389 @@
+/* ---------- Tokens ---------- */
+:root {
+  --paper: #eef1f4;
+  --surface: #ffffff;
+  --ink: #17202b;
+  --muted: #5d6774;
+  --line: #d6dbe2;
+  --pine: #1f6b55; /* 완료 상태에만 사용 */
+  --pine-soft: #e4f0ea;
+  --danger: #b42318;
+  --danger-soft: #fdeceb;
+  --focus: #2f5bd3;
+
+  --font: 'IBM Plex Sans KR', system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  --radius-card: 12px;
+  --radius-control: 8px;
+
+  color-scheme: light;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #12161c;
+    --surface: #1a2029;
+    --ink: #e4e8ee;
+    --muted: #97a1ae;
+    --line: #2d3541;
+    --pine: #52b394;
+    --pine-soft: #1a2e28;
+    --danger: #f2777a;
+    --danger-soft: #3a1d1f;
+    --focus: #7ea2ff;
+    color-scheme: dark;
+  }
+}
+
+/* ---------- Base ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Layout ---------- */
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 56px 24px 80px;
+}
+
+.app-header {
+  margin-bottom: 28px;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+/* ---------- Progress ---------- */
+.progress {
+  margin-top: 20px;
+}
+
+.progress-text {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-percent {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--pine);
+}
+
+.progress-detail {
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+.meter {
+  display: flex;
+  gap: 4px;
+  height: 8px;
+}
+
+.meter-segment,
+.meter-track {
+  flex: 1;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.meter-segment {
+  transition: background-color 220ms ease;
+}
+
+.meter-segment.is-done {
+  background: var(--pine);
+}
+
+.meter-track {
+  overflow: hidden;
+}
+
+.meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--pine);
+  transition: width 220ms ease;
+}
+
+/* ---------- Controls ---------- */
+.field {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+}
+
+.field::placeholder {
+  color: var(--muted);
+}
+
+.field:hover {
+  border-color: var(--muted);
+}
+
+.field:focus-visible {
+  outline-offset: 0;
+  border-color: var(--focus);
+}
+
+.btn {
+  min-height: 44px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  color: var(--surface);
+  background: var(--ink);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 85%, var(--surface));
+}
+
+.btn-quiet {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 0.875rem;
+  color: var(--muted);
+  background: transparent;
+}
+
+.btn-quiet:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.btn-danger:hover,
+.btn-danger:focus-visible {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* ---------- Composer ---------- */
+.composer {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------- Task cards ---------- */
+.list {
+  display: grid;
+  gap: 8px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+  padding: 10px 10px 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  transition: background-color 220ms ease, border-color 220ms ease;
+}
+
+.card.is-done {
+  background: var(--pine-soft);
+  border-color: transparent;
+}
+
+.card.is-editing {
+  border-color: var(--focus);
+}
+
+.card-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.card.is-done .card-text {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent);
+}
+
+.card-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.card-edit {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+}
+
+.card-edit .card-actions {
+  gap: 6px;
+}
+
+/* 체크박스: 기본 input을 유지해 키보드/스크린리더 동작을 그대로 사용 */
+.check {
+  appearance: none;
+  display: grid;
+  place-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  background: var(--surface);
+  border: 2px solid var(--muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.check::before {
+  content: '';
+  width: 10px;
+  height: 6px;
+  margin-top: -2px;
+  border: solid var(--surface);
+  border-width: 0 0 2px 2px;
+  transform: rotate(-45deg) scale(0);
+  transition: transform 160ms ease;
+}
+
+.check:hover {
+  border-color: var(--pine);
+}
+
+.check:checked {
+  background: var(--pine);
+  border-color: var(--pine);
+}
+
+.check:checked::before {
+  transform: rotate(-45deg) scale(1);
+}
+
+/* ---------- Empty state ---------- */
+.empty {
+  margin: 24px 0 0;
+  padding: 32px 16px;
+  color: var(--muted);
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-card);
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 520px) {
+  .app {
+    padding: 32px 16px 56px;
+  }
+
+  .app-title {
+    font-size: 1.875rem;
+  }
+
+  .card {
+    padding-left: 14px;
+  }
+
+  .card-edit {
+    flex-wrap: wrap;
+  }
+
+  .card-edit .field {
+    flex-basis: 100%;
+  }
+
+  .card-edit .card-actions {
+    margin-left: auto;
+  }
+}
+
+/* 아주 좁은 화면: 수정/삭제 버튼을 텍스트 아래 줄로 내림 */
+@media (max-width: 359px) {
+  .card {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 14px 8px 8px 14px;
+  }
+
+  .card .check {
+    margin-top: 1px;
+  }
+
+  .card-text {
+    flex-basis: calc(100% - 36px);
+  }
+
+  .card > .card-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+}
