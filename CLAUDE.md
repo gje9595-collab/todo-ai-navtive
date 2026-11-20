@@ -68,131 +68,94 @@
 
 ### 2-1. 현재 개발 상태
 
-현재 프로젝트에는 `frontend/` 디렉터리만 존재합니다.
+| 영역 | 상태 |
+| --- | --- |
+| `frontend/` | `src/api/`를 통해 FastAPI와 연동됨 |
+| `backend/` | FastAPI REST API 구현됨. 저장소는 **In-Memory**(서버 재시작 시 데이터 소멸) |
+| `supabase/` | 미구현 (DB, RLS, Supabase Auth 모두 예정) |
 
-아직 다음 기능은 구현되지 않았습니다.
+인증은 개발용 `dev` 모드만 있습니다. `Authorization: Bearer <token>`의 토큰 값을 서명 검증 없이 그대로 `user_id`로 사용합니다.
 
-- Backend 서버
-- 데이터베이스
-- 데이터 영속성(Persistence)
+요구사항과 설계는 `docs/`에 있으며, 코드 주석은 그 ID(`FR-xxx`, `NFR-xxx`, `AC-...`, `API 명세 n절`)를 인용합니다.
 
-현재 ToDo 데이터는 React의 상태(State)로만 관리됩니다.
-
-따라서 페이지를 새로고침하면 기존 ToDo 데이터가 사라집니다.
-
-`README.md`에 정의된 `backend/`와 `supabase/` 디렉터리는 향후 개발 계획이며, 현재 구현된 코드는 아닙니다.
-
-프로젝트 문서와 Git 커밋 메시지는 한국어로 작성합니다.
+| 문서 | 내용 |
+| --- | --- |
+| `docs/prd.md` | 요구사항(FR/NFR) |
+| `docs/api-spec.md` | 엔드포인트, 공통 에러 포맷 |
+| `docs/db-schema.md` | 예정된 Supabase 스키마, RLS |
+| `docs/acceptance-criteria.md` | 인수 기준(테스트 이름이 이 ID를 따름) |
+| `docs/tasks.md` | 구현 Task 목록(T-xx) |
 
 ---
 
 ## 3. 실행 명령어 (Commands)
 
-모든 프론트엔드 명령어는 `frontend/` 디렉터리에서 실행합니다.
-
-### 3-1. 의존성 설치
+### 3-1. Frontend (`frontend/`에서 실행)
 
 ```bash
 npm install
+npm run dev      # http://localhost:5173
+npm run build    # tsc -b 타입 검사 + vite build
+npm run lint     # ESLint가 아닌 oxlint (.oxlintrc.json)
 ```
 
-프로젝트에 필요한 패키지를 설치합니다.
+프론트엔드 테스트 러너는 없습니다. 타입 검사는 `npm run build`로 수행합니다.
 
-### 3-2. 개발 서버 실행
+환경 변수는 `frontend/.env.example` 참고:
+
+- `VITE_API_BASE_URL` (기본 `http://localhost:8000`, `/api`는 붙이지 않음)
+- `VITE_DEV_AUTH_TOKEN` (기본 `dev-user`)
+
+### 3-2. Backend (`backend/`에서 실행)
 
 ```bash
-npm run dev
+pip install -r requirements-dev.txt
+uvicorn app.main:app --reload                      # http://localhost:8000, 문서: /docs
+pytest                                             # 전체 테스트
+pytest tests/test_todos_api.py::test_health        # 단일 테스트
+pytest -k ac_fr_008                                # 인수 기준 ID로 선택
 ```
 
-Vite 개발 서버를 실행합니다.
+환경 변수: `CORS_ORIGINS`(쉼표 구분, 기본 `http://localhost:5173`), `AUTH_MODE`(현재 `dev`만 허용, 그 외 값이면 앱 생성 시 `RuntimeError`).
 
-기본 접속 주소:
-
-http://localhost:5173
-
-### 3-3. 프로젝트 빌드
-
-```bash
-npm run build
-```
-
-다음 작업을 수행합니다.
-
-1. `tsc -b`를 통한 TypeScript 타입 검사
-2. `vite build`를 통한 프로덕션 빌드
-
-### 3-4. 코드 정적 검사
-
-```bash
-npm run lint
-```
-
-코드 정적 분석에는 ESLint가 아닌 `oxlint`를 사용합니다.
-
-설정 파일:
-
-```text
-.oxlintrc.json
-```
-
-### 3-5. 테스트 환경
-
-현재 별도의 테스트 러너(Test Runner)는 구성되어 있지 않습니다.
-
-`npm run build`를 통해 TypeScript 타입 검사를 수행합니다.
-
-단, 타입 검사와 빌드 성공이 모든 기능의 정상 동작을 보장하지는 않습니다.
-
-### 3-6. 개발용 샘플 데이터
-
-개발 환경에서 다음 주소로 접속하면 샘플 ToDo 데이터 5개를 생성합니다.
-
-http://localhost:5173/?demo
-
-관련 파일:
-
-```text
-src/demoTodos.ts
-```
-
-샘플 데이터 기능은 다음 조건에서만 활성화됩니다.
-
-```typescript
-import.meta.env.DEV
-```
-
-이 기능은 화면 캡처와 UI 검증에 활용합니다.
-
-프로덕션 빌드에서는 샘플 데이터 없이 빈 상태로 시작합니다.
+화면 검증 시에는 백엔드를 먼저 띄워야 합니다. 백엔드가 없으면 프론트는 "서버에 연결할 수 없습니다" 오류 상태로 표시됩니다.
 
 ---
 
-## 4. 프론트엔드 아키텍처 (Frontend Architecture)
+## 4. 아키텍처 (Architecture)
 
-### 4-1. 상태 관리
+### 4-0. Backend 계층 구조
 
-`App.tsx`는 단일 ToDo 상태를 관리합니다.
+요청은 `routers → services → repositories` 순서로 흐르며 계층마다 책임이 분리되어 있습니다.
 
-```typescript
-todos: Todo[]
-```
+- `routers/todos.py`: HTTP 입출력 변환만 담당. `schemas/`의 Pydantic 모델(`TodoResponse.from_model`)로 변환
+- `services/todo_service.py`: 비즈니스 규칙. 소유권 검사(없으면 404, 타인 소유면 403), `updated_at` 갱신. 테스트용 `clock` 주입 가능
+- `repositories/todo_repository.py`: `TodoRepository` Protocol + `InMemoryTodoRepository`. Supabase 연동 시 같은 인터페이스의 구현체로 교체
+- `models/todo.py`: 불변 dataclass. 수정은 `dataclasses.replace`로 수행
+- `core/auth.py`: `CurrentUserId` 의존성. Supabase JWT 검증으로 바꿀 때 이 파일만 교체하도록 설계됨
+- `core/errors.py`: `AppError` 하위 클래스를 raise하면 모든 에러가 `{"error": {code, message, details}}` 형태로 응답됨. 검증 오류는 `422 VALIDATION_ERROR`
+- `main.py`: `create_app(settings)` 팩토리. 저장소는 `app.state.todo_repository`에 앱마다 하나씩 생성되며 `dependencies.py`에서 주입
 
-다음 CRUD 기능을 처리합니다.
+텍스트 검증(trim 후 1~500자)과 `StrictStr`/`StrictBool` 사용은 `schemas/todo.py`에 있습니다. PATCH는 `text`, `completed` 중 최소 하나가 필요합니다.
 
-- 추가(Add)
-- 완료 상태 변경(Toggle)
-- 수정(Update)
-- 삭제(Delete)
+테스트(`tests/conftest.py`)는 테스트마다 `create_app()`으로 새 앱을 만들어 저장소를 격리합니다. `USER_A`/`USER_B` 헤더와 공통 에러 포맷 검사 헬퍼 `assert_error`를 재사용합니다.
 
-하위 컴포넌트는 주로 UI 표현을 담당하며, 필요한 이벤트 처리 함수를 Props로 전달받습니다.
+### 4-1. Frontend 상태 관리와 API 연동
 
-Backend/API 계층이 도입되기 전까지 상태는 `App.tsx`에서 상위 관리(State Lifting)합니다.
+`App.tsx`가 단일 `todos: Todo[]` 상태와 `loadState`(`loading | ready | error`)를 관리하고, 하위 컴포넌트는 Props로 이벤트 핸들러를 받습니다.
 
-향후 API 관련 코드는 다음 디렉터리에 구성할 계획입니다.
+- `src/api/client.ts`: `apiRequest`가 Base URL, Bearer 토큰, 공통 에러 포맷을 `ApiError(status, code, message)`로 변환. 네트워크 실패는 `NETWORK_ERROR`
+- `src/api/todos.ts`: 서버 DTO(snake_case)를 프론트 `Todo`(`id`, `text`, `completed`)로 변환
 
-```text
-src/api/
-```
+CRUD별 업데이트 전략이 다르므로 수정 시 유지해야 합니다.
+
+| 동작 | 전략 |
+| --- | --- |
+| 추가 | 서버가 id를 발급하므로 응답을 받은 뒤 목록에 추가 |
+| 토글/수정 | 낙관적 업데이트(Optimistic Update), 실패 시 바뀐 필드만 롤백 |
+| 삭제 | 먼저 제거 + 입력창 포커스, `NOT_FOUND`는 성공으로 간주, 그 외 실패는 원래 위치에 복구 |
+
+목록 조회 `useEffect`는 `ignore` 플래그로 StrictMode 이중 실행 및 늦게 도착한 응답을 무시합니다. 오류는 `role="alert"` 알림(`notice`)으로 표시합니다.
 
 ### 4-2. TodoItem 컴포넌트
 

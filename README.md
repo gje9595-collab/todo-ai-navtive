@@ -38,7 +38,9 @@ todo-ai-native/
 │   │   ├── routers/       # API 라우터 (todos 등)
 │   │   ├── schemas/       # Pydantic 요청/응답 모델
 │   │   ├── services/      # 비즈니스 로직
-│   │   └── core/          # 설정, Supabase 연결
+│   │   ├── repositories/  # 데이터 저장소 (현재 In-Memory, 추후 Supabase)
+│   │   ├── models/        # 도메인 모델
+│   │   └── core/          # 설정, 인증, 공통 에러 처리
 │   ├── tests/
 │   └── requirements.txt
 ├── supabase/

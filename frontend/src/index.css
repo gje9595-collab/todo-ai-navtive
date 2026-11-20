@@ -321,6 +321,38 @@ body {
   transform: rotate(-45deg) scale(1);
 }
 
+/* ---------- Notice (API 오류 안내) ---------- */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 8px 8px 8px 16px;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-radius: var(--radius-control);
+}
+
+.notice-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.notice .btn-quiet {
+  color: var(--danger);
+}
+
+.notice .btn-quiet:hover {
+  background: var(--surface);
+}
+
+.field:disabled {
+  background: var(--paper);
+  cursor: not-allowed;
+}
+
 /* ---------- Empty state ---------- */
 .empty {
   margin: 24px 0 0;
