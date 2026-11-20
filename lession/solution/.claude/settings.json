@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/format_changed.py\"",
+            "timeout": 60,
+            "statusMessage": "Prettier 포맷팅 중..."
+          }
+        ]
+      }
+    ], 
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/check_project.py"
+          }
+        ]
+      }
+    ]
+  }
+}
