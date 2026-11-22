@@ -1,2 +1,13 @@
 # OMC 로컬 도구 상태
 .omc/
+
+# 환경 변수 (비밀 값 포함, 커밋 금지)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/

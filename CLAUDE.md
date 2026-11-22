@@ -1,442 +1,351 @@
-
 # CLAUDE.md
 
-이 파일은 Claude Code(claude.ai/code)가 이 저장소의 코드를 분석, 수정, 개발할 때 따라야 할 프로젝트 지침을 정의합니다.
+이 파일은 Claude Code가 이 저장소에서 작업할 때 매 세션 자동으로 읽는 프로젝트 지침입니다.
+프로젝트 상태가 바뀌면(백엔드 추가, 폴더 구조 변경, 새 명령어 등) **같은 작업 안에서 이 파일도 함께 갱신**합니다.
 
 ## 1. 언어 정책 (Language Policy)
 
-### 1-1. 기본 언어
+- 사용자에게 보여주는 모든 응답(설명, 계획, 진행 상황, 오류 분석, 테스트 결과, 최종 요약, 표·제목)은 한국어로 작성한다.
+- 전문 용어는 필요하면 영어를 병기한다. 예: 상태 관리(State Management)
+- 변수·함수·클래스·파일명은 영어, **코드 주석과 Docstring은 한국어**로 작성한다.
+- README.md, `docs/` 문서, **Git 커밋 메시지는 한국어**로 작성한다.
+- API 경로, 라이브러리 이름, 환경 변수, 명령어, 외부 API 명칭, 코드 블록 안의 문법은 원문을 유지한다.
+- Subagent·Skill·MCP·Hook 결과는 한국어로 요약해 설명하되, 외부 도구의 원본 로그와 오류 메시지는 바꾸지 않는다.
+- 사용자가 영어 출력을 명시적으로 요청하면 그 요청을 따른다.
 
-- 모든 사용자 응답은 한국어로 작성한다.
-- 사용자가 별도로 요청하지 않는 한 한국어를 기본 언어로 사용한다.
-- 기술적인 설명, 분석 결과, 작업 계획 및 진행 상황은 한국어로 작성한다.
-- 전문 용어는 필요한 경우 영어를 병기한다.
-  - 예: 컨텍스트 엔지니어링(Context Engineering)
-  - 예: 상태 관리(State Management)
-- 제목, 표, 요약 및 결과 보고서도 한국어로 작성한다.
+## 2. 프로젝트 개요와 현재 상태
 
-### 1-2. 작업 과정 및 결과 설명
+React + FastAPI + Supabase로 만들어 Vercel에 배포할 **ToDo List 웹앱**입니다. 현재 1단계(백엔드 + In-Memory 저장소 + dev 인증 + 프론트 연동), 마감일 기능(FR-012, T-60~T-64), 카테고리·필터 기능(FR-013·FR-014, T-70~T-74)까지 구현되어 있습니다.
 
-- 작업 계획(Plan)은 한국어로 작성한다.
-- 작업 진행 상황과 수행 결과를 한국어로 설명한다.
-- 코드 수정 이유와 변경 사항을 한국어로 설명한다.
-- 오류 발생 시 원인과 해결 방법을 한국어로 설명한다.
-- 테스트 결과와 검증 내용을 한국어로 설명한다.
-- 작업 완료 시 변경 파일, 주요 변경 내용 및 검증 결과를 한국어로 요약한다.
+| 영역 | 현재 상태 (작업 트리 기준) | 목표 |
+| --- | --- | --- |
+| `frontend/` | `src/api/`로 FastAPI와 연동. 로딩·오류·다시 시도 UI. 마감일 입력·표시·수정. 카테고리 선택·표시, 카테고리 필터 | 3단계에서 Supabase Auth 로그인 |
+| `backend/` | FastAPI, Router/Service/Repository 계층, **In-Memory 저장소**(재시작하면 데이터 사라짐), dev 인증 | 2단계 Supabase 저장소 (8절 규칙) |
+| `supabase/` | **없음** | `migrations/`에 테이블·RLS SQL |
+| 인증 | dev 모드: Bearer 토큰 값을 그대로 `user_id`로 사용 (공개 배포 금지) | Supabase Auth JWT 검증 |
+| 배포 | 없음 | `frontend/`, `backend/`를 각각 별도 Vercel 프로젝트로 배포 |
 
-### 1-3. 코드 및 문서 작성 규칙
+- `README.md`는 **목표 아키텍처** 기준으로 쓰여 있어 현재 상태와 다르다. 현재 상태는 이 표를 기준으로 판단한다.
+- 다음 작업은 `docs/tasks.md`의 2단계(T-20 이후)다. 착수 전에 `docs/spec-review.md`의 Q-02, Q-03을 확인한다.
 
-- 변수명, 함수명, 클래스명 및 파일명은 영어를 사용한다.
-- 코드 주석과 Docstring은 한국어로 작성한다.
-- README.md 및 프로젝트 문서는 한국어로 작성한다.
-- Git 커밋 메시지는 한국어로 작성한다.
-- API 경로, 라이브러리 이름, 환경 변수 및 명령어는 원문을 유지한다.
-- 외부 라이브러리의 API 명칭과 코드 문법은 임의로 번역하지 않는다.
+### 2-1. 문서
 
-### 1-4. Agent 및 도구 실행
+| 문서 | 내용 |
+| --- | --- |
+| `docs/prd.md` | 요구사항 `FR-001`~`FR-011`, `NFR-001`~`NFR-009`, 설계 결정 `D-1`~`D-7` (요구사항 ID의 기준 문서) |
+| `docs/api-spec.md` | 엔드포인트, 인증 모드, 공통 에러 포맷, 텍스트 검증 규칙, 프론트 호출 규약 |
+| `docs/db-schema.md` | `public.todos`, 마이그레이션 SQL `0001`~`0004`, RLS·권한 |
+| `docs/acceptance-criteria.md` | 수용 기준 `AC-<ID>-<n>` (pytest 테스트 이름이 이 ID로 시작) |
+| `docs/tasks.md` | 단계별 구현 작업 `T-xx`와 완료 조건 |
+| `docs/spec-review.md` | 명세 간 누락·충돌 검토 결과 `R-xx`, 결정 필요 항목 `Q-xx` |
+| `docs/ui-guidelines.md` | 디자인 토큰, 컴포넌트·반응형·접근성 규칙 (UI 작업 전 필독) |
+| `README.md` | 목표 기술 스택, 환경 변수, Supabase 설정, Vercel 배포 절차 |
 
-- Subagent의 작업 결과를 사용자에게 한국어로 설명한다.
-- Skill 실행 결과를 한국어로 요약한다.
-- MCP 도구 실행 결과를 한국어로 해설한다.
-- Hook 실행 결과 중 사용자에게 필요한 내용을 한국어로 설명한다.
-- OMC를 통한 작업 계획, 진행 상황 및 최종 결과를 한국어로 설명한다.
-- 외부 도구의 원본 로그와 시스템 오류 메시지는 변경하지 않는다.
-- 영어로 출력된 도구 결과는 필요한 경우 한국어로 해석하여 설명한다.
+코드 주석과 테스트 이름에는 관련 요구사항 ID(`FR-xxx`, `NFR-xxx`)를 인용해 추적성을 유지한다.
+구현은 `docs/tasks.md`의 단계 순서를 따르고, 명세를 바꾸면 `docs/spec-review.md`의 커버리지와 발견 사항도 갱신한다.
 
-### 1-5. 출력 형식
+## 3. 기술 스택
 
-- 모든 설명은 한국어를 기본으로 한다.
-- 복잡한 작업은 단계별로 설명한다.
-- 기술 비교 및 분석은 가능한 경우 표로 정리한다.
-- 코드 블록 내부의 명령어와 문법은 원문을 유지한다.
-- 사용자에게 제공하는 최종 요약은 한국어로 작성한다.
+| 영역 | 기술 | 버전/비고 |
+| --- | --- | --- |
+| Frontend | React + TypeScript | React 19.3, TypeScript 7.0 |
+| 빌드 | Vite | 8.3, `@vitejs/plugin-react` |
+| 린트 | oxlint (ESLint 아님) | 1.9x, 설정 `frontend/.oxlintrc.json` |
+| 스타일 | 일반 CSS + CSS 사용자 정의 속성 | **UI 라이브러리 사용 금지** (CSS 프레임워크, 컴포넌트 키트 포함) |
+| 폰트 | IBM Plex Sans KR | `frontend/index.html`에서 Google Fonts로 로드 |
+| Backend (예정) | FastAPI, Pydantic, httpx | pytest로 테스트 |
+| DB/Auth (예정) | Supabase (PostgreSQL, Auth, RLS) | 백엔드는 PostgREST(`/rest/v1`)로 접근 |
+| 배포 (예정) | Vercel | 프론트 정적 호스팅, 백엔드 서버리스 함수 |
+| 개발 환경 | Windows 11, Node 24, npm 11 | Bash(Git Bash)와 PowerShell 모두 사용 가능 |
 
-### 1-6. 언어 정책 적용 원칙
+새 런타임 의존성 추가는 꼭 필요할 때만 하고, 추가 이유를 사용자에게 설명한다.
 
-- 사용자에게 보여주는 설명은 한국어를 우선한다.
-- 사용자가 영어 출력을 명시적으로 요청하면 해당 요청을 따른다.
-- 시스템 및 상위 우선순위 지침과 충돌하는 경우 상위 지침을 따른다.
-- CLI 자체 메뉴, 외부 도구의 원본 출력 등 제어할 수 없는 영역에는 적용을 보장하지 않는다.
+## 4. 폴더 구조
 
----
+```text
+todo-ai-native2/
+├── CLAUDE.md               # 이 파일
+├── README.md               # 목표 아키텍처, 환경 변수, 배포 절차
+├── docs/
+│   ├── prd.md, api-spec.md, db-schema.md, acceptance-criteria.md, tasks.md, spec-review.md
+│   └── ui-guidelines.md    # UI 디자인 규칙
+├── backend/
+│   ├── app/                # main.py, dependencies.py, core/, routers/, services/, repositories/, schemas/, models/ (8-1절)
+│   ├── tests/              # conftest.py, test_todos_api.py (테스트 이름 = 수용 기준 ID)
+│   ├── requirements.txt, requirements-dev.txt, pytest.ini, .env.example
+│   └── .venv/              # 로컬 가상환경 (커밋 금지)
+├── frontend/
+│   ├── index.html          # lang="ko", 폰트 로드, 페이지 제목
+│   ├── public/favicon.svg
+│   ├── src/
+│   │   ├── main.tsx        # 진입점 (StrictMode)
+│   │   ├── App.tsx         # todos·loadState 상태, API 호출과 낙관적 업데이트, 화면 구성
+│   │   ├── api/            # client.ts(ApiError, 인증 헤더), todos.ts(DTO 변환)
+│   │   ├── env.d.ts        # VITE_* 환경 변수 타입
+│   │   ├── types.ts        # Todo { id, text, completed, dueDate, category }
+│   │   ├── categories.ts   # Category 타입, 라벨(업무·개인·학습), 기본값, 필터별 개수 계산
+│   │   ├── dueDate.ts      # 마감일 표시 규칙(오늘·지남), 현지 날짜 키, 허용 범위
+│   │   ├── index.css       # 디자인 토큰 + 전체 스타일 (단일 파일)
+│   │   └── components/
+│   │       ├── TodoInput.tsx      # 입력창 + 카테고리 + 마감일(선택) + 추가 버튼
+│   │       ├── TodoItem.tsx       # 작업 카드, 카테고리·마감 표시, 인라인 편집(텍스트·마감일·카테고리)
+│   │       ├── CategoryFilter.tsx # 카테고리 필터(전체·업무·개인·학습, aria-pressed)
+│   │       └── ProgressMeter.tsx  # 완료율 (분할/연속 막대)
+│   ├── .env.example        # VITE_API_BASE_URL, VITE_DEV_AUTH_TOKEN
+│   ├── .oxlintrc.json
+│   └── package.json
+├── lession/solution/.claude/   # 학습용 예제 (commands, skills, hooks). 실제 설정 아님
+└── .omc/                   # OMC 로컬 상태 (.gitignore 대상, 커밋 금지)
+```
 
-## 2. 프로젝트 개요 (Project)
+백엔드를 추가할 때의 구조는 8-1절을 따른다.
 
-이 프로젝트는 React(Vite, TypeScript), FastAPI, Supabase를 기반으로 개발하고 Vercel에 배포할 예정인 ToDo List 애플리케이션입니다.
+## 5. 실행 명령어
 
-목표 디렉터리 구조와 환경 변수 구성은 `README.md`를 참고합니다.
-
-### 2-1. 현재 개발 상태
-
-현재 프로젝트에는 `frontend/` 디렉터리만 존재합니다.
-
-아직 다음 기능은 구현되지 않았습니다.
-
-- Backend 서버
-- 데이터베이스
-- 데이터 영속성(Persistence)
-
-현재 ToDo 데이터는 React의 상태(State)로만 관리됩니다.
-
-따라서 페이지를 새로고침하면 기존 ToDo 데이터가 사라집니다.
-
-`README.md`에 정의된 `backend/`와 `supabase/` 디렉터리는 향후 개발 계획이며, 현재 구현된 코드는 아닙니다.
-
-프로젝트 문서와 Git 커밋 메시지는 한국어로 작성합니다.
-
----
-
-## 3. 실행 명령어 (Commands)
-
-모든 프론트엔드 명령어는 `frontend/` 디렉터리에서 실행합니다.
-
-### 3-1. 의존성 설치
+### 5-1. Frontend (`frontend/`에서 실행)
 
 ```bash
 npm install
+npm run dev       # http://localhost:5173
+npm run build     # tsc -b 타입 검사 + vite build  (타입 검사는 이 명령으로 한다)
+npm run lint      # oxlint
+npm run preview   # 빌드 결과 미리보기
 ```
 
-프로젝트에 필요한 패키지를 설치합니다.
-
-### 3-2. 개발 서버 실행
+### 5-2. Backend (`backend/`에서 실행)
 
 ```bash
-npm run dev
+python -m venv .venv                               # 최초 1회 (.venv는 .gitignore 대상)
+.venv/Scripts/python -m pip install -r requirements-dev.txt
+.venv/Scripts/python -m uvicorn app.main:app --reload   # http://localhost:8000, 문서: /docs
+.venv/Scripts/python -m pytest                     # 전체 테스트
+.venv/Scripts/python -m pytest -k ac_fr_008        # 수용 기준 ID로 선택 실행
+.venv/Scripts/ruff check .                         # Python 린트 (Ruff, requirements-dev.txt에 고정)
 ```
 
-Vite 개발 서버를 실행합니다.
+- macOS/Linux에서는 `.venv/Scripts/python` 대신 `.venv/bin/python`을 쓴다.
+- 환경 변수는 `backend/.env.example` 참고. `--env-file .env`로 넘길 수 있다. 1단계에서는 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`를 비워 둔다(설정하면 아직 구현 전이라 시작 시 `RuntimeError`).
+- 화면을 확인할 때는 백엔드를 먼저 띄운다. 백엔드가 없으면 프론트는 "할 일 목록을 불러오지 못했습니다" 오류 화면을 보여 준다.
 
-기본 접속 주소:
+## 6. 프론트엔드 아키텍처와 코딩 규칙
 
-http://localhost:5173
+### 6-1. 상태 관리
 
-### 3-3. 프로젝트 빌드
+- `App.tsx`가 단일 `todos: Todo[]` 상태를 소유하고, 하위 컴포넌트는 Props로 데이터와 이벤트 핸들러를 받는다.
+- 파생 값(완료 개수, 완료율, 필터 결과 `visibleTodos`, 필터별 개수)은 **상태로 따로 저장하지 않고** `todos`와 `filter`에서 계산한다.
+- 필터 상태 `filter`(`'all' | Category`)는 `App`이 가진다. 목록은 한 번만 받고 브라우저에서 거른다(PRD D-10). 완료율과 빈 상태는 필터 결과 기준이다.
+- `TodoItem`은 편집에 필요한 로컬 상태 `isEditing`, `draft`만 가진다.
+- 상태 갱신은 함수형 업데이트(`setTodos((prev) => ...)`)와 불변 갱신(`map`, `filter`, 전개 연산자)으로 한다.
+- 렌더링 중에 비순수 함수(`new Date()`, `Math.random()`)를 호출하지 않는다. 필요하면 `useState(() => ...)` 초기화 함수를 쓴다(oxlint `react(purity)` 경고 대상).
+- 새 할 일 id는 서버가 발급한다. 그래서 추가는 응답을 받은 뒤 목록에 넣는다.
 
-```bash
-npm run build
-```
+### 6-2. API 연동 규칙
 
-다음 작업을 수행합니다.
+- 호출은 `src/api/` 계층으로 모은다. `client.ts`는 Base URL, `Authorization: Bearer` 헤더, 공통 에러 포맷 → `ApiError(status, code, message)` 변환을 맡고, `todos.ts`는 서버 DTO(snake_case)를 `Todo`로 바꾼다.
+- 상태는 `loadState`(`loading | ready | error`)로 관리하고, 오류는 `role="alert"` 알림으로 보여 준다.
+- 동작별 업데이트 전략:
 
-1. `tsc -b`를 통한 TypeScript 타입 검사
-2. `vite build`를 통한 프로덕션 빌드
+| 동작 | 전략 |
+| --- | --- |
+| 추가 | 서버 응답을 받은 뒤 목록에 추가 (id를 서버가 발급) |
+| 토글/수정 | 낙관적 업데이트(Optimistic Update). 실패하면 바뀐 필드만 롤백 (`text`, `completed`, `dueDate`, `category`) |
+| 필터 | 요청 없음. 받아 둔 전체 목록을 거른다. 필터가 특정 카테고리면 추가 폼 기본값도 그 카테고리 |
+| 삭제 | 먼저 목록에서 제거 + 입력창 포커스. `NOT_FOUND`는 성공으로 간주, 그 외 실패는 원래 위치에 복구 |
 
-### 3-4. 코드 정적 검사
+- 목록 조회 `useEffect`는 `ignore` 플래그로 StrictMode 이중 실행과 늦게 도착한 응답을 무시한다.
+- 롤백 기준은 화면 상태가 아니라 `confirmedRef`(서버가 마지막으로 확인한 값)다. 화면 상태에는 아직 저장되지 않은 낙관적 값이 섞여 있어, 연속 클릭 후 둘 다 실패하면 서버에 없는 값으로 돌아간다.
+- 토글·수정의 성공 응답으로 화면을 덮어쓰지 않는다. 늦게 온 응답이 사용자의 최신 선택을 되돌린다.
+- 목록을 불러오기 전에는 추가 버튼을 비활성화한다(늦게 온 목록 응답이 방금 추가한 항목을 덮어쓰는 것을 막는다).
+- 환경 변수: `VITE_API_BASE_URL`(기본 `http://localhost:8000`, `/api`는 붙이지 않음), `VITE_DEV_AUTH_TOKEN`.
 
-```bash
-npm run lint
-```
+### 6-3. 코드 스타일
 
-코드 정적 분석에는 ESLint가 아닌 `oxlint`를 사용합니다.
+- 세미콜론 없음, 작은따옴표, 들여쓰기 2칸, 여러 줄 객체·배열 끝에 쉼표(trailing comma).
+- 컴포넌트는 `export default function 이름()` 형태로 쓰고, Props 타입은 같은 파일 위쪽에 `interface 이름Props`로 정의한다.
+- 타입만 가져올 때는 `import type`을 쓴다(`verbatimModuleSyntax` 설정).
+- 이벤트 타입은 `FormEvent`, `KeyboardEvent` 등을 `react`에서 타입으로 가져온다.
 
-설정 파일:
+## 7. UI 디자인 규칙
+
+상세 규칙은 `docs/ui-guidelines.md`에 있다. **UI를 바꾸면 이 문서도 같은 작업에서 갱신한다.**
+
+### 7-1. 디자인 원칙
+
+- 미니멀한 생산성 앱 스타일. 강조 요소는 **분할 진행 막대 하나**뿐이고, 나머지는 조용하게 둔다.
+- 색상 하나에 의미 하나. 그림자·그라데이션 같은 장식 대신 배경·테두리 차이로 상태를 구분한다.
+- 최대 너비 600px 단일 열, 왼쪽 정렬. 순서는 헤더(제목 + 날짜) → 진행률 → 입력 폼 → 작업 카드 목록.
+
+### 7-2. 디자인 토큰 (`src/index.css`의 `:root`)
+
+- 색상은 **하드코딩하지 않고 토큰을 쓴다.** 새 색이 필요하면 토큰을 추가하고, 다크 모드 값도 함께 정의한다.
+- 다크 모드는 `@media (prefers-color-scheme: dark)`에서 같은 토큰을 재정의한다.
+
+| 토큰 | 용도 |
+| --- | --- |
+| `--paper`, `--surface` | 페이지 배경, 카드·입력창 배경 |
+| `--ink` | 본문, 주요 버튼(추가·저장) |
+| `--slate` | 보조 텍스트, 카드 안 고스트 버튼 |
+| `--line`, `--line-strong`, `--track`, `--hover` | 테두리, 진행 막대 빈 칸, 호버 배경 |
+| `--pine` | **완료 상태 전용** (체크박스, 취소선, 진행 칸) |
+| `--focus` | **키보드 포커스 링 전용** |
+| `--danger` | 삭제 버튼 호버·포커스, 오류 알림, 지난 마감("N일 지남") |
+
+- 간격 `--space-1`~`--space-7`(4/8/12/16/24/32/48px), 글자 크기 `--text-sm`/`--text-md`/`--text-xl`(14/16/28px).
+- 모서리 반경은 위계별로 다르게 쓴다: 카드 `--radius-card` 12px, 입력·버튼 `--radius-control` 8px, 진행 칸 `--radius-segment` 3px.
+- 서체는 IBM Plex Sans KR 하나. 굵기는 400/500/700만 쓰고, 바뀌는 숫자에는 `tabular-nums`를 적용한다.
+- 상태 클래스는 `is-` 접두사를 쓴다(`is-done`, `is-editing`). 버튼 변형은 `btn-primary`, `btn-ghost`, `btn-danger`.
+
+### 7-3. 컴포넌트 규칙
+
+- **ProgressMeter**: "N개 중 M개 완료" 문장 + 퍼센트. 작업 24개 이하는 작업 하나당 한 칸(목록 순서), 초과하면 연속형 막대. 막대는 `aria-hidden`, 문장은 `aria-live="polite"`.
+- **작업 카드(TodoItem)**: `--surface` 배경 + 1px 테두리, 그림자 없음. 완료하면 배경을 비우고(`--paper`가 비침) 텍스트를 `--slate` + `--pine` 취소선으로 바꾼다. 수정·삭제는 고스트 버튼.
+- **입력 폼(TodoInput)**: 높이 48px 입력창 + 잉크색 "추가" 버튼. 공백만 있으면 버튼을 비활성화하고, 텍스트는 `trim()` 후 저장한다(최대 500자).
+- **마감일(FR-012)**: 추가 폼 2줄에 "마감일 (선택)" 라벨 + `<input type="date">`. 카드에는 텍스트 아래 `<time>`으로 "M월 D일 마감" / "오늘 마감" / "N일 지남"(`--danger`, 미완료만). 편집 모드에서 날짜 수정과 "마감일 지우기". 날짜는 `YYYY-MM-DD` 문자열로 다루고 "오늘"은 현지 날짜(`dueDate.ts`의 `toDateKey`)로 판단한다. `toISOString()`은 UTC라 쓰지 않는다.
+- **카테고리(FR-013·FR-014)**: 추가·편집 폼에 "카테고리" `<select>`(업무·개인·학습, 기본 개인). 카드에는 텍스트 아래 `.todo-meta` 줄에 카테고리 라벨(`--line` 테두리) → 마감 표시. **카테고리별 색은 쓰지 않는다.** 필터는 입력 폼과 목록 사이의 버튼 4개(`role="group"`, `aria-pressed`, 개수 표시). 편집으로 카테고리를 바꿔 현재 필터에서 빠지면 입력창으로 포커스를 옮긴다.
+- **빈 상태**: 점선 칸 안에 다음 행동을 안내하는 문구를 넣는다. 필터 결과가 비면 "<카테고리> 할 일이 없습니다."
+- 작업 카드와 입력 폼은 같은 토큰을 쓰고, 새 컴포넌트도 기존 토큰과 버튼 변형을 재사용한다.
+
+### 7-4. 반응형
+
+| 조건 | 동작 |
+| --- | --- |
+| `max-width: 600px` | 페이지 여백 축소 |
+| `pointer: coarse` | 버튼·편집 입력 높이 44px (터치 대상 크기) |
+| `max-width: 359px` | 카드의 수정·삭제 버튼을 다음 줄로 내림 (360px 이상은 한 줄 유지, NFR-002) |
+| `prefers-reduced-motion: reduce` | 모든 전환 효과 끔 |
+
+### 7-5. 접근성 (리팩터링 중에도 반드시 유지, NFR-001·NFR-003)
+
+- 체크박스는 네이티브 `<input type="checkbox">` + `appearance: none`. 작업 텍스트는 `<label htmlFor>`로 연결한다.
+- 모든 조작 요소는 `:focus-visible`에서 3px `--focus` 외곽선(offset 2px)을 표시한다. 텍스트 입력창만 offset 0 + 테두리도 `--focus`로 바꾼다. `outline: none`만 단독으로 쓰지 않는다.
+- 수정·삭제 버튼의 `aria-label`에 작업 내용을 넣는다. 예: `"운동 30분" 삭제`
+- 편집을 저장하거나 취소하면 해당 작업의 "수정" 버튼으로 포커스를 되돌린다(`TodoItem`의 `returnFocus`).
+- 편집 중 Esc는 편집 취소. 삭제 후에는 새 할 일 입력창으로 포커스를 옮긴다(`App`의 `inputRef` → `TodoInput`).
+- 시각적으로 숨긴 라벨은 `.sr-only` 클래스를 쓴다.
+
+## 8. API 개발 규칙 (백엔드 구현 시)
+
+### 8-1. 계층 구조
+
+요청은 `routers → services → repositories` 순서로 흐르고, 계층마다 책임을 나눈다.
 
 ```text
-.oxlintrc.json
+backend/
+├── app/
+│   ├── main.py            # create_app(settings) 팩토리, 저장소는 app.state에 앱마다 하나
+│   ├── dependencies.py    # 저장소·서비스 의존성 주입
+│   ├── routers/todos.py   # HTTP 입출력 변환만 담당
+│   ├── schemas/todo.py    # Pydantic 요청/응답 모델, 입력 검증
+│   ├── services/          # 비즈니스 규칙 (소유권 검사, updated_at 갱신)
+│   ├── repositories/      # TodoRepository Protocol + InMemory/Supabase 구현
+│   ├── models/todo.py     # 불변 dataclass. 수정은 dataclasses.replace
+│   └── core/              # config, auth(CurrentUserId), errors(AppError)
+├── api/index.py           # Vercel 서버리스 진입점
+├── tests/
+└── requirements*.txt
 ```
 
-### 3-5. 테스트 환경
+- 라우터에 비즈니스 로직이나 DB 호출을 넣지 않는다.
+- 인증은 `core/auth.py`의 `CurrentUserId` 의존성 한 곳에서만 처리한다. 인증 방식을 바꿀 때 이 파일만 교체하도록 한다.
+- 저장소는 Protocol로 추상화한다. Supabase 환경 변수가 없으면 In-Memory, 있으면 Supabase 저장소를 쓴다. 둘 중 하나만 있으면 앱 생성 시 `RuntimeError`.
 
-현재 별도의 테스트 러너(Test Runner)는 구성되어 있지 않습니다.
+### 8-2. 엔드포인트 (Base: `/api`, `docs/prd.md` FR 기준)
 
-`npm run build`를 통해 TypeScript 타입 검사를 수행합니다.
+| 메서드 · 경로 | 동작 | 성공 응답 | 요구사항 |
+| --- | --- | --- | --- |
+| `GET /api/todos` | 본인 목록, `created_at` 오름차순. 선택 쿼리 `?category=` | 200 `{ "items": [TodoResponse] }` | FR-002, FR-008, FR-014 |
+| `POST /api/todos` | 생성 (`{ "text", "due_date"?, "category"? }`) | 201 `TodoResponse` | FR-001, FR-010, FR-012, FR-013 |
+| `PATCH /api/todos/{todo_id}` | 부분 수정 (`text`, `completed`, `due_date`, `category` 중 최소 하나) | 200 `TodoResponse` | FR-003, FR-004, FR-012, FR-013 |
+| `DELETE /api/todos/{todo_id}` | 삭제 | 204 본문 없음 | FR-005 |
 
-단, 타입 검사와 빌드 성공이 모든 기능의 정상 동작을 보장하지는 않습니다.
+- `TodoResponse` = `{ id, text, completed, due_date, category, created_at, updated_at }`. JSON 필드는 snake_case.
+- `due_date`: `YYYY-MM-DD` 문자열만 허용(2000-01-01~2100-12-31, 실제 날짜). PATCH에서 **생략은 유지, `null`은 지우기**다. 스키마는 `model_fields_set`(`has_due_date`)으로 구분하고, 서비스는 `UNSET` 센티널을 받는다. `text`, `completed`의 `null`은 계속 422.
+- `category`: `work`·`personal`·`study`만 허용(`models/todo.py`의 `Category`, 스키마의 `CategoryField`). 생성 시 생략하면 `personal`, `null`은 POST·PATCH 모두 422. 같은 `CategoryField`를 `GET ?category=` 쿼리 검증에도 쓰고, 오류 `details.field`에서 `query.` 접두사는 뺀다. 저장소 `list_by_user(user_id, category)`는 소유자 조건을 항상 함께 건다.
+- DB는 `docs/db-schema.md`의 `0001`에 `category text not null default 'personal'` + `todos_category_valid`를 문서로만 반영했다. 실제 적용은 T-21/T-22에서 승인 후.
+- 검증: `text`는 `trim()` 후 1~500자. `StrictStr`, `StrictBool`로 타입 강제 변환을 막는다.
+- 페이지네이션·검색·단건 조회는 범위 밖이다(PRD 4-2).
 
-### 3-6. 개발용 샘플 데이터
+### 8-3. 에러 처리
 
-개발 환경에서 다음 주소로 접속하면 샘플 ToDo 데이터 5개를 생성합니다.
+모든 에러는 `AppError` 하위 클래스를 raise해 아래 형식으로 응답한다.
 
-http://localhost:5173/?demo
-
-관련 파일:
-
-```text
-src/demoTodos.ts
+```json
+{ "error": { "code": "VALIDATION_ERROR", "message": "할 일 내용을 입력해 주세요.", "details": null } }
 ```
 
-샘플 데이터 기능은 다음 조건에서만 활성화됩니다.
+| 코드 | 상태 | 상황 |
+| --- | --- | --- |
+| `UNAUTHENTICATED` | 401 | 토큰 없음·만료·서명 불일치 |
+| `FORBIDDEN` | 403 | 다른 사용자 소유 리소스 |
+| `NOT_FOUND` | 404 | 존재하지 않는 todo |
+| `VALIDATION_ERROR` | 422 | 요청 본문 검증 실패 (FastAPI 기본 422도 이 형식으로 변환) |
+| `INTERNAL_ERROR` | 500 | DB 오류 등 (내부 정보는 응답에 노출하지 않음) |
 
-```typescript
-import.meta.env.DEV
-```
+### 8-4. 보안
 
-이 기능은 화면 캡처와 UI 검증에 활용합니다.
+- 모든 쿼리는 `user_id` 조건을 명시한다. `update`·`delete`는 `id`와 `user_id`를 함께 조건으로 쓴다(FR-008).
+- RLS는 이중 방어선이다. Secret Key(`service_role`)는 RLS를 우회하므로 서버 측 소유자 필터를 빼먹으면 안 된다.
+- `SUPABASE_SECRET_KEY`는 백엔드 환경 변수로만 쓰고, 프론트엔드(`VITE_*`)나 저장소에 넣지 않는다(NFR-004).
+- 시각은 UTC로 저장·응답한다.
+- `dev` 인증(토큰 값을 그대로 user_id로 사용)은 로컬 개발 전용이다. 공개 배포 전에 Supabase JWT 검증으로 바꾼다.
 
-프로덕션 빌드에서는 샘플 데이터 없이 빈 상태로 시작합니다.
+## 9. 테스트 정책
 
----
+### 9-1. 공통
 
-## 4. 프론트엔드 아키텍처 (Frontend Architecture)
+- 작업을 마치기 전에 가능한 범위에서 아래 검사를 **실제로 실행**하고 결과를 보고한다. 실행하지 못한 검사는 못 했다고 밝힌다.
+- 테스트와 검증 항목에는 관련 요구사항 ID를 붙인다.
 
-### 4-1. 상태 관리
+### 9-1-1. 자동 린트 Hook (`.claude/settings.json`)
 
-`App.tsx`는 단일 ToDo 상태를 관리합니다.
+- Edit·Write 후 PostToolUse Hook이 `.claude/hooks/check_changed_files.py`로 **바뀐 파일 하나만** 검사한다. JS/TS는 그 파일의 `package.json`에 설정된 린터(oxlint, `--deny-warnings`), Python은 Ruff(`backend/.venv` 우선).
+- 문제가 있으면 종료 코드 2로 린터 원본 출력을 보고한다. 보고를 받으면 같은 작업 안에서 고친다. 린터가 설치되지 않았으면 안내만 남기고 막지 않는다.
+- 명령은 `python3` → `python` → `py` 중 실제로 Python 3.9 이상이 실행되는 것을 고른다(Windows의 `python3` Store 스텁 회피, macOS/Linux 지원).
 
-```typescript
-todos: Todo[]
-```
+### 9-2. Frontend
 
-다음 CRUD 기능을 처리합니다.
+- 테스트 러너가 없다. 필수 검사는 `npm run build`(타입 검사)와 `npm run lint`(경고 0건 유지).
+- UI·동작을 바꾸면 브라우저에서 CRUD 5가지(추가, 조회, 수정, 삭제, 완료 토글)와 키보드 흐름(Tab 순서, Esc 취소, 포커스 복귀)을 확인한다.
+- 자동 확인 방법: `frontend/public/`에 임시 HTML 하네스를 두고, 같은 출처 iframe 안의 앱을 DOM 이벤트로 조작한다.
+  - 입력값은 `HTMLInputElement.prototype`의 `value` setter를 호출하고 `input` 이벤트를 발생시켜야 React에 반영된다. 제출은 `form.requestSubmit()`.
+  - 작업 카드는 `.todo-list > li`로 선택한다. `ProgressMeter`도 `<li>`를 쓰므로 `li`만으로 선택하면 개수가 틀린다.
+  - Edge를 `--remote-debugging-port`로 띄우고 Node 내장 `WebSocket`으로 CDP에 붙으면, 실제 Tab·Esc 키 입력(`Input.dispatchKeyEvent`)과 다크 모드(`Emulation.setEmulatedMedia`)를 검증할 수 있다.
+  - CDP `Fetch` 도메인으로 요청을 붙잡아 두면 "응답 전 재클릭" 같은 경쟁 조건을 재현할 수 있다. PATCH·DELETE는 CORS 사전 요청(`OPTIONS`)이 먼저 나가므로, 붙잡힌 요청 중 `OPTIONS`는 바로 통과시켜야 한다.
+  - API 연동 E2E는 백엔드를 8000이 아닌 포트(예: 8099)로 띄우고, 프론트는 `VITE_API_BASE_URL`, 백엔드는 `CORS_ORIGINS`를 그 포트에 맞춘다.
+  - 검증이 끝나면 하네스 파일을 삭제하고, 띄운 서버를 종료한다.
+- 테스트 러너를 도입하면(예: Vitest + Testing Library) 이 절을 갱신한다.
 
-- 추가(Add)
-- 완료 상태 변경(Toggle)
-- 수정(Update)
-- 삭제(Delete)
+### 9-3. Backend
 
-하위 컴포넌트는 주로 UI 표현을 담당하며, 필요한 이벤트 처리 함수를 Props로 전달받습니다.
+- pytest로 API 테스트를 작성한다. 엔드포인트마다 정상 경로와 401/403/404/422 경로를 모두 검사한다.
+- 테스트 함수 이름에 요구사항 ID를 넣는다. 예: `test_fr_008_other_user_todo_is_forbidden` → `pytest -k fr_008`로 선택 실행.
+- 테스트마다 `create_app()`으로 새 앱을 만들어 저장소를 격리한다. 사용자 헤더(`USER_A`, `USER_B`)와 에러 포맷 검사 헬퍼(`assert_error`)는 `tests/conftest.py`에 둔다.
+- 기본 실행은 In-Memory 저장소로 한다. 실제 Supabase 테스트는 `TEST_SUPABASE=1`일 때만 실행하고, 테스트 전용 사용자 행만 삭제한다.
 
-Backend/API 계층이 도입되기 전까지 상태는 `App.tsx`에서 상위 관리(State Lifting)합니다.
+## 10. Git 및 보안 규칙
 
-향후 API 관련 코드는 다음 디렉터리에 구성할 계획입니다.
+- 브랜치: `main`(배포 가능), `feature/*`(기능 개발). 커밋·푸시는 사용자가 요청할 때만 한다.
+- 커밋 메시지는 한국어, Conventional Commits 접두사를 쓴다. 예: `feat: 작업 카드 UI 개선`, `docs: CLAUDE.md 갱신`
+- 커밋 금지: `.env`(`.env.example`만 허용), `.omc/`, `node_modules/`, `dist/`, 그리고 루트의 `db정보.txt`(접속 정보로 보이는 파일. 내용을 출력하거나 외부로 보내지 않는다)
 
-```text
-src/api/
-```
+## 11. 개발 환경 주의 사항
 
-### 4-2. TodoItem 컴포넌트
+- **Windows 헤드리스 캡처**: Headless Chrome/Edge는 약 500px보다 좁은 창을 제대로 렌더링하지 못한다. 모바일 너비(390px 등)는 `--window-size`가 아니라 같은 출처 페이지 안의 해당 너비 `<iframe>`으로 캡처한다. CDP의 `Emulation.setDeviceMetricsOverride`로는 340px도 정상 확인됐다.
+- 헤드리스 `--screenshot`와 `--virtual-time-budget`만 쓰면 동작 시퀀스 도중에 캡처될 수 있다. 하네스가 완료 신호(`document.title` 등)를 남기면 CDP로 그 신호를 기다린 뒤 캡처한다.
+- 사용자가 이미 띄워 둔 개발 서버(5173, 5174 등)는 종료하지 않는다. 검증용 서버는 다른 포트(예: `--port 5199 --strictPort`)로 띄우고, 끝나면 종료한다.
+- 임시 파일(스크린샷, 스크립트)은 프로젝트 밖 스크래치 디렉터리에 둔다.
 
-`TodoItem`은 편집 기능에 필요한 로컬 상태만 관리합니다.
+## 12. 작업 원칙과 보고 형식
 
-```typescript
-isEditing
-draft
-```
+### 12-1. 작업 순서
 
-- `isEditing`: 현재 편집 모드 여부
-- `draft`: 편집 중인 임시 입력값
+1. **시작 전**: 관련 코드와 문서(`docs/prd.md`, UI 작업이면 `docs/ui-guidelines.md`)를 읽고, 바꿀 대상과 영향 범위를 파악한다. 복잡한 작업은 한국어로 계획을 먼저 쓴다.
+2. **작업 중**: 기존 구조와 코딩 규칙을 유지하고, 불필요한 파일 변경을 최소화한다. CRUD 동작과 7-5절 접근성 동작을 깨뜨리지 않는다.
+3. **완료 후**: 변경 파일을 확인하고, 9절 검사를 실행하고, 영향받는 문서(이 파일, `docs/ui-guidelines.md`, `README.md`)를 갱신한다.
 
-### 4-3. ProgressMeter 컴포넌트
+### 12-2. 최종 보고 형식 (한국어)
 
-`ProgressMeter`는 `todos` 상태를 기반으로 완료율을 계산합니다.
-
-- 작업이 24개 이하인 경우 작업별 세그먼트를 표시합니다.
-- 작업이 24개를 초과하면 연속형 진행률 막대로 전환합니다.
-
-완료율은 별도의 상태로 중복 저장하지 않고 기존 ToDo 데이터에서 계산합니다.
-
-### 4-4. UI 스타일링
-
-현재 별도의 UI 라이브러리는 사용하지 않습니다.
-
-스타일은 일반 CSS로 작성하며 다음 파일에서 관리합니다.
-
-```text
-src/index.css
-```
-
-디자인 시스템은 `:root`에 정의된 CSS 사용자 정의 속성(Custom Properties)을 사용합니다.
-
-다크 모드는 다음 미디어 쿼리를 통해 처리합니다.
-
-```css
-@media (prefers-color-scheme: dark) {
-  /* 다크 모드 스타일 */
-}
-```
-
-색상을 추가하거나 변경할 때는 하드코딩된 색상값 대신 디자인 토큰을 사용합니다.
-
-주요 색상 규칙:
-
-- `--pine`: 완료(Completed) 상태 전용 색상
-- `--focus`: 키보드 포커스 링(Focus Ring) 색상
-
-### 4-5. 폰트
-
-기본 폰트는 IBM Plex Sans KR을 사용합니다.
-
-Google Fonts에서 불러오며 설정 위치는 다음과 같습니다.
-
-```text
-index.html
-```
-
----
-
-## 5. 접근성 규칙 (Accessibility)
-
-기존 접근성 동작은 UI 개선 및 리팩토링 과정에서도 반드시 유지해야 합니다.
-
-### 5-1. 체크박스
-
-체크박스는 네이티브 HTML 요소를 사용합니다.
-
-```html
-<input type="checkbox">
-```
-
-CSS의 다음 속성으로 기본 외형을 변경합니다.
-
-```css
-appearance: none;
-```
-
-작업 텍스트는 해당 체크박스의 `<label>`로 연결합니다.
-
-### 5-2. 포커스 관리
-
-편집 모드에서 저장 또는 취소한 후에는 해당 작업의 "수정" 버튼으로 포커스를 복귀시킵니다.
-
-관련 구현:
-
-```text
-TodoItem
-returnFocus
-```
-
-작업을 삭제한 후에는 새로운 ToDo 입력 필드로 포커스를 이동합니다.
-
-관련 구현:
-
-```text
-App → TodoInput
-inputRef
-```
-
-Esc 키를 누르면 편집 모드를 취소합니다.
-
-### 5-3. 스크린 리더 지원
-
-각 작업의 버튼에는 작업 내용을 포함하는 `aria-label`을 제공합니다.
-
-진행률 안내 텍스트는 `aria-live` 영역을 사용하여 변경 사항을 보조 기술에 전달합니다.
-
-### 5-4. 모바일 접근성
-
-화면 너비가 360px 이상일 때는 작업 버튼을 한 줄에 배치합니다.
-
-359px 이하에서는 다음 미디어 쿼리를 적용하여 버튼이 줄바꿈되도록 처리합니다.
-
-```css
-@media (max-width: 359px) {
-  /* 작은 화면의 버튼 줄바꿈 */
-}
-```
-
----
-
-## 6. UI 디자인 규칙 (UI Guidelines)
-
-UI 작업을 수행할 때는 다음 문서를 반드시 참고합니다.
-
-```text
-docs/ui-guidelines.md
-```
-
-UI가 변경되면 해당 문서도 함께 업데이트합니다.
-
-### 6-1. 디자인 시스템
-
-새로운 컴포넌트는 정의된 다음 규칙을 따라야 합니다.
-
-- Color System: 색상 체계
-- Typography: 글꼴 및 텍스트 규칙
-- Spacing: 간격 체계
-- Component Rules: 컴포넌트 규칙
-- Responsive Breakpoints: 반응형 기준
-- Accessibility Rules: 접근성 규칙
-
-### 6-2. 컴포넌트 일관성
-
-작업 카드(Task Card)와 작업 입력 폼(Task Form)은 공통 디자인 토큰을 사용합니다.
-
-새로운 컴포넌트를 추가할 때도 기존 디자인 시스템을 재사용합니다.
-
-### 6-3. 반응형 및 접근성
-
-모든 UI 변경 작업은 다음 사항을 고려해야 합니다.
-
-- 데스크톱 화면
-- 태블릿 화면
-- 모바일 화면
-- 키보드 접근성
-- 스크린 리더 지원
-
-### 6-4. 기존 기능 유지
-
-UI 개선 과정에서 기존 CRUD 기능을 유지해야 합니다.
-
-UI 변경 후에는 추가, 조회, 수정, 삭제 및 완료 상태 변경 기능을 검증합니다.
-
----
-
-## 7. 개발 환경 및 주의 사항 (Notes)
-
-### 7-1. Windows 브라우저 화면 캡처
-
-현재 Windows 환경의 Headless Chrome/Edge에서는 약 500px보다 작은 브라우저 창이 정상적으로 렌더링되지 않을 수 있습니다.
-
-따라서 다음과 같이 설정해도 실제 390px 화면 캡처가 잘릴 수 있습니다.
-
-```bash
---window-size=390,...
-```
-
-실제 모바일 너비의 화면을 캡처하려면 동일 출처(Same-Origin) 페이지에서 너비 390px의 `<iframe>`을 사용합니다.
-
-예를 들어 다음 디렉터리에 임시 HTML 파일을 생성할 수 있습니다.
-
-```text
-frontend/public/
-```
-
-화면 캡처와 검증이 끝나면 임시 파일을 삭제합니다.
-
-### 7-2. OMC 로컬 상태
-
-다음 디렉터리는 OMC의 로컬 도구 상태를 저장합니다.
-
-```text
-.omc/
-```
-
-이 디렉터리는 Git 저장소에 커밋하지 않습니다.
-
-필요한 경우 `.gitignore`에 등록하여 추적되지 않도록 관리합니다.
-
----
-
-## 8. Claude Code 작업 원칙
-
-### 8-1. 작업 시작 전
-
-1. 프로젝트 구조를 확인한다.
-2. `README.md`와 관련 문서를 확인한다.
-3. 기존 코드의 동작을 분석한다.
-4. 변경 대상과 영향을 받는 기능을 파악한다.
-5. 필요한 경우 작업 계획을 한국어로 작성한다.
-
-### 8-2. 작업 수행 중
-
-1. 기존 프로젝트 구조와 코딩 규칙을 유지한다.
-2. 불필요한 파일 변경을 최소화한다.
-3. 기존 CRUD 기능을 훼손하지 않는다.
-4. UI 변경 시 `docs/ui-guidelines.md`를 참고한다.
-5. 변경 사항과 주요 의사결정을 한국어로 설명한다.
-
-### 8-3. 작업 완료 후
-
-1. 변경된 파일을 확인한다.
-2. 가능한 범위에서 빌드 및 정적 검사를 수행한다.
-3. 기존 기능에 대한 영향을 검증한다.
-4. 오류가 있다면 원인과 해결 방법을 한국어로 설명한다.
-5. 최종 작업 결과를 한국어로 요약한다.
-
-### 8-4. 최종 보고 형식
-
-작업 완료 시 가능한 한 다음 형식을 따른다.
-
-#### 작업 요약
-- 수행한 작업을 한국어로 설명한다.
-
-#### 변경 파일
-- 변경된 파일과 변경 이유를 정리한다.
-
-#### 검증 결과
-- 실행한 검사와 결과를 설명한다.
-
-#### 남은 작업
-- 미완료 항목이나 추가 개선 사항을 정리한다.
-
-모든 보고 내용은 한국어로 작성한다.
+- **작업 요약**: 무엇을 했는지
+- **변경 파일**: 파일별 변경 내용과 이유
+- **검증 결과**: 실행한 검사와 결과, 실행하지 못한 검사
+- **남은 작업**: 미완료 항목, 사용자가 확인하거나 결정할 사항
