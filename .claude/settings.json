@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for p in python3 python py; do \"$p\" -c 'import sys; sys.exit(sys.version_info < (3, 9))' >/dev/null 2>&1 && exec \"$p\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/check_changed_files.py\"; done; echo '[check_changed_files] Python 3.9 이상을 찾지 못해 린트 검사를 건너뜁니다.' >&2; exit 0",
+            "timeout": 120,
+            "statusMessage": "변경된 파일 린트 검사 중..."
+          }
+        ]
+      }
+    ]
+  }
+}

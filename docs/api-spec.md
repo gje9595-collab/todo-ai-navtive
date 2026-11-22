@@ -1,147 +1,195 @@
-# API 명세서 (FastAPI)
+# API 명세 (FastAPI)
 
 | 항목 | 내용 |
 | --- | --- |
+| 문서 버전 | v2.2 (2026-11-20) |
 | 기준 문서 | [prd.md](./prd.md) |
 | 연관 문서 | [db-schema.md](./db-schema.md), [acceptance-criteria.md](./acceptance-criteria.md), [tasks.md](./tasks.md) |
-| Base URL | `${VITE_API_BASE_URL}/api` (로컬 예: `http://localhost:8000/api`) |
-| 데이터 포맷 | 요청/응답 모두 `application/json; charset=utf-8` |
+| Base URL | `${VITE_API_BASE_URL}/api` (로컬: `http://localhost:8000/api`) |
+| 데이터 형식 | 요청·응답 모두 `application/json; charset=utf-8`, 필드명 snake_case, 시각은 UTC ISO 8601(`Z`) |
 
-## 1. 인증 방식
+## 1. 인증 (FR-007, NFR-004)
 
-- FastAPI는 **자체 회원가입/로그인 엔드포인트를 제공하지 않는다.** (FR-007)
-- 프론트엔드가 Supabase Auth 클라이언트로 로그인/로그아웃을 처리하고, 발급된 **Supabase JWT(access
-  token)** 를 모든 요청의 `Authorization: Bearer <token>` 헤더에 담아 전송한다.
-- FastAPI는 Supabase 프로젝트의 JWKS/서명 키로 JWT를 검증하고, 클레임의 `sub`(Supabase user id)를
-  `user_id`로 사용해 요청을 처리한다. (FR-008, NFR-004)
-- JWT가 없거나 유효하지 않으면 모든 `/api/todos*` 엔드포인트는 `401 Unauthorized`를 반환한다.
-- **DB 접속 방식**: FastAPI는 `SUPABASE_SERVICE_ROLE_KEY`로 Supabase PostgreSQL에 연결하며, 모든
-  쿼리에 JWT `sub` 클레임에서 얻은 `user_id`로 `WHERE` 절을 명시적으로 적용해 소유자 필터링을
-  수행한다(FR-008). [db-schema.md](./db-schema.md) 3절의 RLS 정책은 이 서버 측 필터링이 누락되거나
-  Supabase 클라이언트가 직접 접근하는 향후 경로에 대비한 이중 방어선이며, service-role 접속 자체는
-  RLS를 우회하므로 RLS만으로는 FR-008을 충족하지 못한다는 점에 유의한다.
+모든 `/api/todos*` 요청에는 `Authorization: Bearer <token>` 헤더가 있어야 한다. 검증 방식은 `AUTH_MODE` 환경 변수로 정한다.
+
+| `AUTH_MODE` | 단계 | `user_id` 결정 방식 | 사용 가능 환경 |
+| --- | --- | --- | --- |
+| `dev` | 1~2단계 | 토큰 값을 서명 검증 없이 그대로 사용. 1~128자, 앞뒤 공백 제거 | 로컬, 비공개 환경만 (PRD D-4) |
+| `supabase` | 3단계 | Supabase Auth JWT를 검증한 뒤 `sub` 클레임(UUID) 사용 | 모든 환경 |
+
+- 헤더가 없거나, `Bearer` 형식이 아니거나, 토큰이 비어 있거나, JWT 검증에 실패하면 `401 UNAUTHENTICATED`.
+- 인증 검사는 요청 본문 검증보다 **먼저** 실행한다. 인증 없는 잘못된 본문 요청은 422가 아니라 401이다.
+- `AUTH_MODE`에 위 두 값 외의 값이 들어오면 앱 생성 시 `RuntimeError`로 시작을 막는다.
+- FastAPI는 로그인·회원가입 엔드포인트를 제공하지 않는다. 3단계에서는 프론트가 Supabase Auth로 로그인하고 access token을 보낸다.
+
+### 1-1. 저장소 접근 (PRD D-5)
+
+- 백엔드는 `SUPABASE_URL`의 PostgREST(`/rest/v1/todos`)에 `apikey: <SUPABASE_SECRET_KEY>` 헤더로 접근한다.
+- Secret Key는 RLS를 우회하므로 **모든 쿼리에 `user_id` 조건을 서버 코드에서 명시**한다. RLS는 2차 방어선이다.
+- `SUPABASE_URL`과 `SUPABASE_SECRET_KEY`가 둘 다 없으면 In-Memory 저장소를 쓴다. 하나만 있으면 앱 생성 시 `RuntimeError`가 난다. Vercel(`VERCEL=1`)에서 둘 다 없어도 `RuntimeError`다.
 
 ## 2. 공통 규약
 
-### 2-1. 에러 응답 포맷
+### 2-1. 에러 응답 (NFR-006)
 
-모든 에러는 아래 형태의 JSON 본문을 반환한다.
+모든 에러는 아래 형식으로 응답한다. `message`는 사용자에게 보여 줄 수 있는 한국어 문장이다.
 
 ```json
 {
   "error": {
     "code": "VALIDATION_ERROR",
     "message": "할 일 내용을 입력해 주세요.",
-    "details": null
+    "details": [{ "field": "text", "message": "공백만 입력할 수 없습니다." }]
   }
 }
 ```
 
-| 코드 | HTTP 상태 | 의미 | 관련 요구사항 |
+| 코드 | 상태 | 상황 | `details` |
 | --- | --- | --- | --- |
-| `UNAUTHENTICATED` | 401 | JWT 누락/만료/서명 불일치 | FR-007, NFR-004 |
-| `FORBIDDEN` | 403 | 본인 소유가 아닌 리소스 접근 | FR-008 |
-| `NOT_FOUND` | 404 | 대상 ToDo가 존재하지 않음(삭제됨 포함) | FR-005 |
-| `VALIDATION_ERROR` | 422 | 요청 본문 검증 실패(빈 텍스트, 길이 초과 등) | FR-010 |
-| `INTERNAL_ERROR` | 500 | 서버 내부 오류(DB 연결 등) | NFR-006 |
+| `UNAUTHENTICATED` | 401 | 토큰 없음, 형식 오류, dev 토큰 128자 초과, JWT 만료·서명 불일치 | `null` |
+| `FORBIDDEN` | 403 | 다른 사용자 소유의 할 일 (PRD D-6) | `null` |
+| `NOT_FOUND` | 404 | 존재하지 않는 할 일, 이미 삭제된 할 일 | `null` |
+| `VALIDATION_ERROR` | 422 | 본문·경로 파라미터 검증 실패. FastAPI 기본 422 응답도 이 형식으로 변환 | `[{field, message}]` |
+| `INTERNAL_ERROR` | 500 | DB 오류 등 예상하지 못한 오류. 내부 정보(SQL, 스택, 키)는 응답에 넣지 않음 | `null` |
+| `BAD_REQUEST` | 400 | 본문이 UTF-8이 아니어서 해석할 수 없음 (프레임워크 수준) | `null` |
+| `NOT_FOUND` | 404 | 정의되지 않은 경로 (프레임워크 수준) | `null` |
+| `METHOD_NOT_ALLOWED` | 405 | 경로는 있지만 허용되지 않는 메서드 (프레임워크 수준) | `null` |
 
-### 2-2. 공통 응답 스키마 — `TodoResponse`
+### 2-2. `TodoResponse`
 
 ```json
 {
   "id": "b3b6b1b0-7e0a-4d9a-8b0a-1a2b3c4d5e6f",
-  "text": "API 명세 초안 작성",
+  "text": "분기 보고서 초안 작성",
   "completed": false,
-  "created_at": "2026-11-19T07:00:00Z",
-  "updated_at": "2026-11-19T07:00:00Z"
+  "due_date": "2026-11-25",
+  "category": "work",
+  "created_at": "2026-11-20T05:00:00Z",
+  "updated_at": "2026-11-20T05:00:00Z"
 }
 ```
 
-프론트엔드 [types.ts](../frontend/src/types.ts)의 `Todo { id, text, completed }`와 호환되도록
-`id`, `text`, `completed` 필드명을 그대로 사용한다(스네이크/카멜 변환은 프론트 API 클라이언트 계층에서
-처리). `created_at`/`updated_at`은 정렬(FR-002) 및 추후 동기화 디버깅용으로 포함한다.
+- `user_id`는 응답에 포함하지 않는다.
+- `due_date`는 마감일(`YYYY-MM-DD`) 또는 `null`(마감일 없음)이다. 시각과 시간대는 없다 (PRD D-8, FR-012).
+- `category`는 `work`(업무), `personal`(개인), `study`(학습) 중 하나이며 항상 값이 있다 (PRD D-9, FR-013).
+- v2.1에서 `due_date`, v2.2에서 `category`를 추가했다. 기존 필드는 바뀌지 않았으므로 이전 클라이언트도 그대로 동작한다.
+- 프론트 `src/api/todos.ts`가 `id`, `text`, `completed`, `due_date`(→ `dueDate`), `category`를 `Todo` 타입으로 변환한다.
+
+### 2-3. 텍스트 검증 규칙 (FR-001, FR-004, FR-010)
+
+| 규칙 | 내용 |
+| --- | --- |
+| 타입 | JSON 문자열만 허용(`StrictStr`). 숫자·`null`·배열은 422 |
+| 공백 제거 | Python `str.strip()`으로 앞뒤 공백(탭·줄바꿈 포함)을 제거한 값을 저장한다 |
+| 길이 | 공백 제거 후 1~500자. 글자 수는 유니코드 코드 포인트 기준(Python `len`) |
+| 오류 메시지 | 빈 값: "할 일 내용을 입력해 주세요." / 초과: "할 일은 500자 이하로 입력해 주세요." |
+
+### 2-4. 마감일 검증 규칙 (FR-012)
+
+| 규칙 | 내용 |
+| --- | --- |
+| 형식 | JSON 문자열 `YYYY-MM-DD`(숫자 10자리와 하이픈)만 허용. 숫자 타임스탬프, `20261125`, 시각이 붙은 값은 422 |
+| 실제 날짜 | `2026-02-30`처럼 존재하지 않는 날짜는 422 |
+| 범위 | `2000-01-01` ~ `2100-12-31`. 지난 날짜도 허용(이미 늦은 일을 기록할 수 있게) |
+| `null` | 생성 시 생략과 같음(마감일 없음). PATCH에서는 **마감일을 지운다** |
+| 오류 메시지 | 형식: "마감일은 YYYY-MM-DD 형식이어야 합니다." / 없는 날짜: "존재하지 않는 날짜입니다." / 범위: "마감일은 2000-01-01부터 2100-12-31 사이여야 합니다." |
+
+### 2-5. 카테고리 검증 규칙 (FR-013, FR-014)
+
+| 규칙 | 내용 |
+| --- | --- |
+| 허용값 | `work`, `personal`, `study` (소문자 정확히 일치). 대소문자 변형, 빈 문자열, 숫자, 배열은 422 |
+| 생성 | 생략하면 `personal`. `null`은 422 (카테고리는 필수 값, D-9) |
+| 수정 | 생략하면 유지. `null`은 422 (`text`, `completed`와 같은 규칙) |
+| 목록 필터 | `GET /api/todos?category=<값>`. 같은 허용값만 받고, 잘못된 값(빈 값 포함)은 422, `details[0].field`는 `category` |
+| 오류 메시지 | "카테고리는 work, personal, study 중 하나여야 합니다." |
+
+추가로, 요청 본문에 정의되지 않은 필드가 있으면 422로 거부한다(`extra="forbid"`). 클라이언트 실수를 일찍 드러내기 위해서다.
 
 ## 3. 엔드포인트
 
-### 3-1. `GET /api/todos` — 목록 조회
+### 3-1. `GET /api/health` — 상태 확인 (NFR-005)
 
-- **관련 요구사항**: FR-002, FR-008, NFR-007
-- **인증**: 필수
-- **쿼리 파라미터**: 없음 (정렬은 항상 `created_at ASC` 고정, 페이지네이션은 Out-of-scope)
-- **응답 200**:
+- 인증: 필요 없음
+- 응답 200: `{ "status": "ok" }`
+- 배포 확인용이다. 저장소 연결은 검사하지 않는다.
 
-```json
-{
-  "items": [ { "id": "...", "text": "...", "completed": false, "created_at": "...", "updated_at": "..." } ]
-}
-```
+### 3-2. `GET /api/todos` — 목록 조회 (FR-002, FR-008, NFR-007)
 
-- **에러**: `UNAUTHENTICATED`(401)
-- **수용 기준**: 로그인한 사용자 본인 소유 ToDo만 반환되어야 한다 (타 사용자 데이터 미포함, FR-008).
+- 인증: 필수
+- 쿼리 파라미터: `category`(선택, 2-5절). 생략하면 전체, 지정하면 그 카테고리만 반환한다 (FR-014). 소유자 조건은 항상 함께 적용한다
+- 정렬: `created_at ASC, id ASC`. 같은 시각에 만든 항목의 순서를 고정하려고 `id`를 보조 키로 쓴다.
+- 응답 200: `{ "items": [TodoResponse, ...] }`. 할 일이 없으면 `items: []`
+- 에러: 401, 422(잘못된 `category`), 500
 
-### 3-2. `POST /api/todos` — 생성
+### 3-3. `POST /api/todos` — 생성 (FR-001, FR-010)
 
-- **관련 요구사항**: FR-001, FR-010
-- **인증**: 필수
-- **요청 본문** — `TodoCreateRequest`:
+- 인증: 필수
+- 요청 본문: `{ "text": string, "due_date"?: string | null, "category"?: string }` (2-3절, 2-4절, 2-5절 규칙). `due_date`를 생략하면 마감일 없음, `category`를 생략하면 `personal`
+- 응답 201: 생성된 `TodoResponse`. `completed`는 항상 `false`, `created_at`과 `updated_at`은 같은 값
+- 에러: 401, 422, 500
 
-```json
-{ "text": "API 명세 초안 작성" }
-```
+### 3-4. `PATCH /api/todos/{todo_id}` — 부분 수정 (FR-003, FR-004, FR-008, FR-010)
 
-| 필드 | 타입 | 제약 | 관련 요구사항 |
+- 인증: 필수
+- 경로: `todo_id`는 UUID. 형식이 틀리면 422
+- 요청 본문: `text`(string), `completed`(boolean), `due_date`(string | null), `category`(string) 중 **최소 하나**. 하나도 없으면 422
+- `text`, `completed`, `category`에 `null`을 보내면 422다. `due_date`만 `null`을 허용하며, 마감일을 지운다는 뜻이다 (2-4절)
+- `due_date`를 생략하면 기존 마감일을 그대로 둔다
+- 처리 순서: 대상 조회 → 없으면 404 → 소유자가 다르면 403 → 갱신 (`id`와 `user_id`를 함께 조건으로 사용)
+- `updated_at`은 갱신 시각으로 바뀐다. 값이 같아도 요청이 성공하면 갱신한다.
+- 응답 200: 갱신된 `TodoResponse`
+- 에러: 401, 403, 404, 422, 500
+- 프론트는 체크박스 토글(`{completed}`)과 텍스트 저장(`{text}`)에 모두 이 엔드포인트를 쓴다.
+
+### 3-5. `DELETE /api/todos/{todo_id}` — 삭제 (FR-005, FR-008)
+
+- 인증: 필수
+- 처리 순서: 대상 조회 → 없으면 404 → 소유자가 다르면 403 → 삭제 (`id`와 `user_id`를 함께 조건으로 사용)
+- 응답 204: 본문 없음
+- 에러: 401, 403, 404, 422(UUID 형식 오류), 500
+- 두 번째 삭제 요청은 404를 받는다. 프론트는 `NOT_FOUND`를 성공으로 처리한다(FR-005).
+
+## 4. CORS
+
+- 허용 Origin은 `CORS_ORIGINS`(쉼표 구분, 기본 `http://localhost:5173`)로 정한다.
+- 허용 메서드: `GET, POST, PATCH, DELETE, OPTIONS`. 허용 헤더: `Authorization, Content-Type`.
+- 와일드카드(`*`)는 쓰지 않는다.
+
+## 5. 프론트엔드 호출 규약 (FR-011, NFR-006)
+
+| 동작 | 호출 | 화면 갱신 전략 | 실패 시 |
 | --- | --- | --- | --- |
-| `text` | string | 서버에서 `trim()` 후 1~500자. 공백만 있으면 `VALIDATION_ERROR` | FR-001, FR-010 |
+| 첫 화면 | `GET /api/todos` | 로딩 표시 → 응답으로 목록 교체. 응답 전에는 추가 버튼 비활성화 | 오류 메시지 + "다시 시도" 버튼 |
+| 추가 | `POST` | 응답을 받은 뒤 목록 끝에 추가. 요청 중에는 추가 버튼 비활성화, 입력창 읽기 전용 | 입력값 유지 + 알림 |
+| 토글 | `PATCH {completed}` | 낙관적 업데이트. 성공 응답으로 화면을 덮어쓰지 않음 | `completed`만 **서버가 마지막으로 확인한 값**으로 롤백(사용자가 그사이 다시 바꾸지 않은 경우만) + 알림 |
+| 수정 | `PATCH {text?, due_date?, category?}` (바뀐 필드만) | 낙관적 업데이트. 성공 응답으로 화면을 덮어쓰지 않음 | 보낸 필드만 롤백(위와 같은 기준과 조건) + 알림 |
+| 필터 | 요청 없음 | 받아 둔 전체 목록을 브라우저에서 거른다 (D-10) | - |
+| 삭제 | `DELETE` | 먼저 제거 + 입력창 포커스 | `NOT_FOUND`는 성공 처리. 그 외에는 원래 위치에 복구 + 알림 |
 
-- **응답 201**: `TodoResponse` (신규 생성된 ToDo, `completed: false` 고정)
-- **에러**: `UNAUTHENTICATED`(401), `VALIDATION_ERROR`(422)
+- 인증 없는 요청이 깨진 JSON을 보내도 422가 아니라 401이다. FastAPI는 JSON 파싱을 인증보다 먼저 하므로, 에러 처리기에서 보호된 경로의 인증을 먼저 확인한다.
+- 네트워크 실패는 `ApiError(code: "NETWORK_ERROR")`로 바꾸고 "서버에 연결할 수 없습니다."로 안내한다.
+- 3단계에서 401을 받으면 로그인 화면으로 보낸다.
 
-### 3-3. `PATCH /api/todos/{todo_id}` — 수정(텍스트/완료 상태)
+## 6. 요구사항 ↔ 엔드포인트
 
-- **관련 요구사항**: FR-003, FR-004, FR-008, FR-010
-- **인증**: 필수
-- **경로 파라미터**: `todo_id` (UUID)
-- **요청 본문** — `TodoUpdateRequest` (부분 업데이트, 둘 중 최소 1개 필드 필요):
-
-```json
-{ "text": "수정된 내용", "completed": true }
-```
-
-| 필드 | 타입 | 제약 |
-| --- | --- | --- |
-| `text` | string (optional) | 제공 시 `trim()` 후 1~500자 검증 (FR-004, FR-010) |
-| `completed` | boolean (optional) | 제공 시 그대로 반영 (FR-003) |
-
-- **응답 200**: 갱신된 `TodoResponse`
-- **에러**: `UNAUTHENTICATED`(401), `VALIDATION_ERROR`(422, 빈 텍스트/양 필드 모두 누락),
-  `NOT_FOUND`(404, 존재하지 않는 id), `FORBIDDEN`(403, 타인 소유 — RLS와 이중 방어)
-- **비고**: 체크박스 토글(FR-003)과 텍스트 저장(FR-004)을 하나의 엔드포인트로 통합해 프론트의
-  `toggleTodo`/`updateTodo` 두 호출을 동일 API로 매핑한다.
-
-### 3-4. `DELETE /api/todos/{todo_id}` — 삭제
-
-- **관련 요구사항**: FR-005, FR-008
-- **인증**: 필수
-- **응답 204**: 본문 없음
-- **에러**: `UNAUTHENTICATED`(401), `NOT_FOUND`(404), `FORBIDDEN`(403)
-
-## 4. 요구사항 ↔ 엔드포인트 매핑표
-
-| 요구사항 ID | 엔드포인트 |
+| ID | 엔드포인트·절 |
 | --- | --- |
-| FR-001 | `POST /api/todos` |
+| FR-001 | `POST /api/todos`, 2-3 |
 | FR-002 | `GET /api/todos` |
-| FR-003 | `PATCH /api/todos/{id}` (`completed` 필드) |
-| FR-004 | `PATCH /api/todos/{id}` (`text` 필드) |
-| FR-005 | `DELETE /api/todos/{id}` |
-| FR-006 | 클라이언트가 `GET /api/todos` 응답으로 `ProgressMeter` 계산(별도 API 없음) |
-| FR-007 | 모든 엔드포인트의 `Authorization` 헤더 검증 |
-| FR-008 | 모든 엔드포인트의 소유자 필터링(`WHERE user_id = :jwt_sub`) + `FORBIDDEN`/`NOT_FOUND` 처리 |
-| FR-009 | 모든 쓰기 엔드포인트가 Supabase PostgreSQL에 커밋 후 응답 |
-| FR-010 | `POST /api/todos`, `PATCH /api/todos/{id}` 요청 검증 |
-
-## 5. 명시적으로 제공하지 않는 것
-
-- ToDo 단건 조회(`GET /api/todos/{id}`)는 현재 UI가 목록 전체만 사용하므로 범위에서 제외한다
-  (필요 시 TASKS에서 백로그로 기록).
-- 페이지네이션/검색/정렬 파라미터는 Out-of-scope(PRD 4-2).
+| FR-003 | `PATCH` (`completed`) |
+| FR-004 | `PATCH` (`text`), 2-3 |
+| FR-005 | `DELETE` |
+| FR-006 | 별도 API 없음. 프론트가 `GET` 결과로 계산 (PRD D-7) |
+| FR-007 | 1절 |
+| FR-008 | 1-1절, `PATCH`·`DELETE` 처리 순서, `GET` 소유자 필터 |
+| FR-009 | 모든 쓰기 엔드포인트는 저장소에 반영한 뒤 응답 |
+| FR-010 | 2-3절 |
+| FR-011 | 5절 |
+| FR-012 | `POST`·`PATCH`의 `due_date`, 2-4절, `TodoResponse.due_date` |
+| FR-013 | `POST`·`PATCH`의 `category`, 2-5절, `TodoResponse.category` |
+| FR-014 | `GET /api/todos?category=`, 2-5절, 5절(필터) |
+| NFR-004 | 1절, 1-1절, 2-1절(`INTERNAL_ERROR` 정보 비노출), 4절 |
+| NFR-005 | `GET /api/health` |
+| NFR-006 | 2-1절, 5절 |
+| NFR-007 | `GET /api/todos` (인덱스는 db-schema 2절) |

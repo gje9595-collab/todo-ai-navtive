@@ -1,46 +1,71 @@
-/* ---------- Tokens ---------- */
+/* ───────── 디자인 토큰 ─────────
+ * 색상마다 한 가지 의미만 갖는다.
+ * --ink: 본문과 주요 동작 / --pine: 완료 상태 전용 / --focus: 키보드 포커스 전용
+ * --danger: 파괴적 동작·실패·기한 초과 (spec-review R-23)
+ */
 :root {
-  --paper: #eef1f4;
+  --paper: #f3f5f7;
   --surface: #ffffff;
   --ink: #17202b;
-  --muted: #5d6774;
-  --line: #d6dbe2;
-  --pine: #1f6b55; /* 완료 상태에만 사용 */
-  --pine-soft: #e4f0ea;
-  --danger: #b42318;
-  --danger-soft: #fdeceb;
-  --focus: #2f5bd3;
+  --ink-hover: #2c3846;
+  --on-ink: #ffffff;
+  --slate: #5b6675;
+  --line: #dde2e8;
+  --line-strong: #b9c1cb;
+  --track: #e3e7ec;
+  --hover: #edf0f3;
+  --pine: #1e7350;
+  --danger: #b4362a;
+  --focus: #1d6bf3;
 
-  --font: 'IBM Plex Sans KR', system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
   --radius-card: 12px;
   --radius-control: 8px;
+  --radius-segment: 3px;
 
-  color-scheme: light;
-  font-family: var(--font);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --text-sm: 0.875rem; /* 14px: 보조 텍스트, 버튼 */
+  --text-md: 1rem; /* 16px: 본문 */
+  --text-xl: 1.75rem; /* 28px: 제목 */
+
+  --control-h: 36px;
+  --input-h: 48px;
+
+  font-family: 'IBM Plex Sans KR', system-ui, sans-serif;
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--ink);
   background: var(--paper);
   -webkit-font-smoothing: antialiased;
+  /* 날짜 선택기 같은 네이티브 컨트롤도 테마를 따르게 한다 */
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #12161c;
-    --surface: #1a2029;
-    --ink: #e4e8ee;
-    --muted: #97a1ae;
-    --line: #2d3541;
-    --pine: #52b394;
-    --pine-soft: #1a2e28;
-    --danger: #f2777a;
-    --danger-soft: #3a1d1f;
-    --focus: #7ea2ff;
+    --paper: #12161b;
+    --surface: #1b2128;
+    --ink: #e6eaef;
+    --ink-hover: #ffffff;
+    --on-ink: #12161b;
+    --slate: #98a3b0;
+    --line: #2b333d;
+    --line-strong: #46515e;
+    --track: #2b333d;
+    --hover: #242b33;
+    --pine: #5cc493;
+    --danger: #f08a7c;
+    --focus: #7ab0ff;
     color-scheme: dark;
   }
 }
 
-/* ---------- Base ---------- */
 *,
 *::before,
 *::after {
@@ -49,366 +74,568 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
   background: var(--paper);
 }
 
-:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-}
-
-.visually-hidden {
+.sr-only {
   position: absolute;
   width: 1px;
   height: 1px;
-  margin: -1px;
   padding: 0;
+  margin: -1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
 }
 
-/* ---------- Layout ---------- */
+/* ───────── 포커스: 모든 조작 요소에 같은 링 ───────── */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ───────── 레이아웃 ───────── */
 .app {
-  max-width: 640px;
+  max-width: 600px;
   margin: 0 auto;
-  padding: 56px 24px 80px;
+  padding: var(--space-7) var(--space-5) var(--space-7);
 }
 
 .app-header {
-  margin-bottom: 28px;
+  margin-bottom: var(--space-6);
 }
 
 .app-title {
   margin: 0;
-  font-size: 2.25rem;
-  font-weight: 600;
-  line-height: 1.15;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.2;
   letter-spacing: -0.02em;
 }
 
-/* ---------- Progress ---------- */
+.app-date {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--slate);
+}
+
+/* ───────── 진행률 ───────── */
 .progress {
-  margin-top: 20px;
+  margin-bottom: var(--space-5);
+}
+
+.progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .progress-text {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin: 0 0 10px;
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
 .progress-percent {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--pine);
-}
-
-.progress-detail {
-  font-size: 0.9375rem;
-  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--slate);
 }
 
 .meter {
-  display: flex;
-  gap: 4px;
   height: 8px;
+  margin: 0;
+  padding: 0;
 }
 
-.meter-segment,
-.meter-track {
+/* 작업 하나 = 칸 하나. 목록 순서대로 놓인다. */
+.meter-segmented {
+  display: flex;
+  gap: 3px;
+  list-style: none;
+}
+
+.segment {
   flex: 1;
-  border-radius: 2px;
-  background: var(--line);
+  border-radius: var(--radius-segment);
+  background: var(--track);
+  transition: background-color 200ms ease-out;
 }
 
-.meter-segment {
-  transition: background-color 220ms ease;
-}
-
-.meter-segment.is-done {
+.segment.is-done {
   background: var(--pine);
 }
 
-.meter-track {
+.meter-continuous {
+  border-radius: var(--radius-segment);
+  background: var(--track);
   overflow: hidden;
 }
 
 .meter-fill {
-  display: block;
   height: 100%;
   background: var(--pine);
-  transition: width 220ms ease;
+  transition: width 200ms ease-out;
 }
 
-/* ---------- Controls ---------- */
-.field {
+/* ───────── 입력 폼 ─────────
+ * 1줄: 할 일 입력 / 2줄: 마감일(선택) + 추가 버튼. DOM 순서와 Tab 순서가 같다.
+ */
+.todo-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.todo-form-row,
+.edit-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.text-input {
   flex: 1;
   min-width: 0;
-  min-height: 44px;
-  padding: 10px 14px;
+  height: var(--input-h);
+  padding: 0 var(--space-4);
   font: inherit;
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-control);
 }
 
-.field::placeholder {
-  color: var(--muted);
+.text-input::placeholder {
+  color: var(--slate);
 }
 
-.field:hover {
-  border-color: var(--muted);
+.todo-form > .text-input,
+.edit-form > .text-input {
+  flex: none;
 }
 
-.field:focus-visible {
+/* ───────── 폼 보조 입력: 카테고리(FR-013), 마감일(FR-012) ───────── */
+.form-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.field-label {
+  font-size: var(--text-sm);
+  color: var(--slate);
+}
+
+.select-input,
+.date-input {
+  height: 40px;
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+}
+
+.select-input {
+  padding-right: var(--space-1);
+  cursor: pointer;
+}
+
+.text-input:focus-visible,
+.select-input:focus-visible,
+.date-input:focus-visible {
   outline-offset: 0;
   border-color: var(--focus);
 }
 
+/* ───────── 버튼 ───────── */
 .btn {
-  min-height: 44px;
-  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
   font: inherit;
+  font-size: var(--text-sm);
   font-weight: 500;
-  border: 1px solid transparent;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-control);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .btn:disabled {
-  opacity: 0.4;
   cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .btn-primary {
-  color: var(--surface);
+  color: var(--on-ink);
   background: var(--ink);
+  border-color: var(--ink);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--ink) 85%, var(--surface));
+  background: var(--ink-hover);
 }
 
-.btn-quiet {
-  min-height: 36px;
-  padding: 0 10px;
-  font-size: 0.875rem;
-  color: var(--muted);
+.todo-form .btn-primary {
+  min-height: 40px;
+  padding: 0 var(--space-5);
+  /* 좁은 화면에서 다음 줄로 넘어가도 오른쪽에 붙인다 (편집 폼의 저장·취소와 같은 위치) */
+  margin-left: auto;
+}
+
+/* 카드 안의 보조 동작: 평소에는 조용하게, 눌러야 할 때만 드러난다 */
+.btn-ghost {
+  color: var(--slate);
   background: transparent;
-}
-
-.btn-quiet:hover {
-  color: var(--ink);
-  background: var(--paper);
-}
-
-.btn-danger:hover,
-.btn-danger:focus-visible {
-  color: var(--danger);
-  background: var(--danger-soft);
-}
-
-/* ---------- Composer ---------- */
-.composer {
-  display: flex;
-  gap: 8px;
-}
-
-/* ---------- Task cards ---------- */
-.list {
-  display: grid;
-  gap: 8px;
-  margin: 24px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 60px;
-  padding: 10px 10px 10px 16px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  transition: background-color 220ms ease, border-color 220ms ease;
-}
-
-.card.is-done {
-  background: var(--pine-soft);
   border-color: transparent;
 }
 
-.card.is-editing {
-  border-color: var(--focus);
+.btn-ghost:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--hover);
 }
 
-.card-text {
+.btn-danger:hover:not(:disabled),
+.btn-danger:focus-visible {
+  color: var(--danger);
+}
+
+/* ───────── 카테고리 필터 (FR-014) ─────────
+ * 선택 상태는 색만이 아니라 테두리·배경(구조)과 aria-pressed로 함께 전달한다.
+ */
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--slate);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.filter-btn:hover {
+  color: var(--ink);
+  background: var(--hover);
+}
+
+.filter-btn.is-selected {
+  color: var(--ink);
+  background: var(--surface);
+  border-color: var(--line-strong);
+}
+
+.filter-count {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--slate);
+}
+
+/* ───────── 작업 카드 ───────── */
+.todo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  transition: background-color 200ms ease-out;
+}
+
+/* 완료된 카드는 배경을 비워 뒤로 물러난다 */
+.todo-item.is-done {
+  background: transparent;
+}
+
+.todo-item.is-editing {
+  border-color: var(--line-strong);
+  padding: var(--space-2);
+}
+
+/* 작업 텍스트 + 마감 표시 */
+.todo-body {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.todo-text {
+  max-width: 100%;
+  padding: var(--space-1) 0;
   overflow-wrap: anywhere;
   cursor: pointer;
 }
 
-.card.is-done .card-text {
-  color: var(--muted);
+.todo-item.is-done .todo-text {
+  color: var(--slate);
   text-decoration: line-through;
-  text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent);
+  text-decoration-color: var(--pine);
+  text-decoration-thickness: 2px;
 }
 
-.card-actions {
+/* 텍스트 아래 보조 정보 줄: 카테고리 + 마감 */
+.todo-meta {
   display: flex;
-  gap: 2px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-1);
+}
+
+/* 카테고리: 새 색 없이 라벨과 --line 테두리로만 구분한다 (spec-review R-31) */
+.todo-category {
+  padding: 0 6px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--slate);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-segment);
+}
+
+/* 마감 표시: 평소에는 보조 텍스트, 오늘은 잉크색, 지났고 미완료면 --danger (AC-FR-012-7) */
+.todo-due {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--slate);
+}
+
+.todo-due.is-today {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.todo-due.is-overdue {
+  font-weight: 500;
+  color: var(--danger);
+}
+
+/* 완료된 할 일은 마감을 강조하지 않는다 */
+.todo-item.is-done .todo-due {
+  font-weight: 400;
+  color: var(--slate);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-1);
   flex-shrink: 0;
 }
 
-.card-edit {
+/* 1줄: 텍스트 / 2줄: 마감일 + 저장·취소 */
+.edit-form {
   display: flex;
-  flex: 1;
-  min-width: 0;
-  gap: 8px;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
 }
 
-.card-edit .card-actions {
-  gap: 6px;
+.edit-form .text-input {
+  height: 40px;
+  padding: 0 var(--space-3);
 }
 
-/* 체크박스: 기본 input을 유지해 키보드/스크린리더 동작을 그대로 사용 */
-.check {
-  appearance: none;
-  display: grid;
-  place-content: center;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+.empty {
   margin: 0;
-  background: var(--surface);
-  border: 2px solid var(--muted);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease;
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--slate);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-card);
 }
 
-.check::before {
-  content: '';
-  width: 10px;
-  height: 6px;
-  margin-top: -2px;
-  border: solid var(--surface);
-  border-width: 0 0 2px 2px;
-  transform: rotate(-45deg) scale(0);
-  transition: transform 160ms ease;
-}
-
-.check:hover {
-  border-color: var(--pine);
-}
-
-.check:checked {
-  background: var(--pine);
-  border-color: var(--pine);
-}
-
-.check:checked::before {
-  transform: rotate(-45deg) scale(1);
-}
-
-/* ---------- Notice (API 오류 안내) ---------- */
+/* ───────── 동작 실패 알림 (FR-011) ───────── */
 .notice {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 0 0 16px;
-  padding: 8px 8px 8px 16px;
-  color: var(--danger);
-  background: var(--danger-soft);
-  border-radius: var(--radius-control);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-card);
 }
 
 .notice-text {
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
+  color: var(--ink);
 }
 
-.notice .btn-quiet {
-  color: var(--danger);
+/* ───────── 목록 로딩 (FR-011) ───────── */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.notice .btn-quiet:hover {
+.skeleton-card {
+  height: 56px;
+  border-radius: var(--radius-card);
+  background: var(--track);
+  animation: skeleton-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes skeleton-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
+
+/* ───────── 목록 불러오기 실패 (FR-011) ───────── */
+.load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
   background: var(--surface);
-}
-
-.field:disabled {
-  background: var(--paper);
-  cursor: not-allowed;
-}
-
-/* ---------- Empty state ---------- */
-.empty {
-  margin: 24px 0 0;
-  padding: 32px 16px;
-  color: var(--muted);
-  text-align: center;
-  border: 1px dashed var(--line);
+  border: 1px solid var(--danger);
   border-radius: var(--radius-card);
 }
 
-/* ---------- Mobile ---------- */
-@media (max-width: 520px) {
+.load-error-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.load-error-text {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--slate);
+}
+
+/* ───────── 체크박스: 네이티브 요소 유지, 외형만 변경 ───────── */
+.checkbox {
+  appearance: none;
+  flex-shrink: 0;
+  display: grid;
+  place-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  background: var(--surface);
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out;
+}
+
+.checkbox:hover {
+  border-color: var(--pine);
+}
+
+.checkbox:checked {
+  background: var(--pine);
+  border-color: var(--pine);
+}
+
+.checkbox:checked::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  border: solid var(--surface);
+  border-width: 0 2px 2px 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+
+/* ───────── 반응형 ───────── */
+@media (max-width: 600px) {
   .app {
-    padding: 32px 16px 56px;
+    padding: var(--space-6) var(--space-4);
   }
 
-  .app-title {
-    font-size: 1.875rem;
-  }
-
-  .card {
-    padding-left: 14px;
-  }
-
-  .card-edit {
-    flex-wrap: wrap;
-  }
-
-  .card-edit .field {
-    flex-basis: 100%;
-  }
-
-  .card-edit .card-actions {
-    margin-left: auto;
+  .app-header {
+    margin-bottom: var(--space-5);
   }
 }
 
-/* 아주 좁은 화면: 수정/삭제 버튼을 텍스트 아래 줄로 내림 */
+/* 터치 기기: 누르기 쉬운 크기(44px) 확보 */
+@media (pointer: coarse) {
+  :root {
+    --control-h: 44px;
+  }
+
+  .edit-form .text-input,
+  .select-input,
+  .date-input,
+  .todo-form .btn-primary {
+    height: 44px;
+    min-height: 44px;
+  }
+}
+
+/* 359px 이하: 버튼을 다음 줄로 내린다 */
 @media (max-width: 359px) {
-  .card {
+  .todo-item {
     flex-wrap: wrap;
-    align-items: flex-start;
-    padding: 14px 8px 8px 14px;
   }
 
-  .card .check {
-    margin-top: 1px;
-  }
-
-  .card-text {
-    flex-basis: calc(100% - 36px);
-  }
-
-  .card > .card-actions {
+  .actions {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .todo-form .btn-primary {
+    padding: 0 var(--space-4);
   }
 }
 
@@ -417,5 +644,6 @@ body {
   *::before,
   *::after {
     transition: none !important;
+    animation: none !important;
   }
 }

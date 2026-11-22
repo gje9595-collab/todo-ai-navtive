@@ -1,10 +1,11 @@
-// FastAPI 호출 공통 처리: Base URL, 인증 헤더, 에러 응답(API 명세 2-1) 해석.
+// FastAPI 호출 공통 처리: Base URL, 인증 헤더, 공통 에러 응답(api-spec 2-1) 해석.
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(/\/+$/, '')
 
-// Supabase Auth 연동 전까지 사용하는 개발용 토큰. 백엔드 dev 인증 모드에서 user_id로 쓰입니다.
+// Supabase Auth 연동(3단계) 전까지 쓰는 개발용 토큰. 백엔드 dev 인증 모드에서 user_id가 된다.
 const DEV_AUTH_TOKEN = import.meta.env.VITE_DEV_AUTH_TOKEN ?? 'dev-user'
 
+/** API 실패를 나타낸다. `code`는 서버 에러 코드 또는 `NETWORK_ERROR`. */
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
@@ -38,6 +39,7 @@ export async function apiRequest<T>(path: string, { method = 'GET', json }: Requ
       body: json === undefined ? undefined : JSON.stringify(json),
     })
   } catch {
+    // 서버가 꺼져 있거나 CORS로 막힌 경우 (api-spec 5절)
     throw new ApiError(0, 'NETWORK_ERROR', '서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해 주세요.')
   }
 
@@ -47,10 +49,7 @@ export async function apiRequest<T>(path: string, { method = 'GET', json }: Requ
 
   if (!response.ok) {
     const error = (data as ErrorBody | null)?.error
-    const message =
-      response.status === 401
-        ? '인증이 필요합니다. 다시 로그인해 주세요.'
-        : (error?.message ?? `요청을 처리하지 못했습니다. (HTTP ${response.status})`)
+    const message = error?.message ?? `요청을 처리하지 못했습니다. (HTTP ${response.status})`
     throw new ApiError(response.status, error?.code ?? 'UNKNOWN_ERROR', message)
   }
 

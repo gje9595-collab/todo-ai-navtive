@@ -2,133 +2,176 @@
 
 | 항목 | 내용 |
 | --- | --- |
+| 문서 버전 | v2.2 (2026-11-20) |
 | 기준 문서 | [prd.md](./prd.md), [api-spec.md](./api-spec.md), [db-schema.md](./db-schema.md) |
-| 형식 | Given–When–Then |
-| 연관 문서 | [tasks.md](./tasks.md) |
+| 형식 | Given / When / Then |
+| ID 규칙 | `AC-<요구사항 ID>-<번호>` |
 
-각 기준은 PRD의 요구사항 ID를 그대로 사용한다. 괄호 안은 검증 대상 구현 위치를 가리킨다.
+## 검증 방법 표기
 
-## FR-001 — ToDo 생성
+| 표기 | 방법 | 위치 |
+| --- | --- | --- |
+| `[API]` | pytest. 테스트 이름은 AC ID를 소문자·밑줄로 바꿔 시작한다. 예: `AC-FR-008-2` → `test_ac_fr_008_2_...` | `backend/tests/` |
+| `[DB]` | Supabase SQL 또는 `TEST_SUPABASE=1 pytest` | Supabase 프로젝트 |
+| `[UI]` | 브라우저 확인. CLAUDE.md 9-2절의 하네스(iframe + CDP)로 자동화할 수 있다 | `frontend/` |
 
-- **AC-FR-001-1**: Given 로그인한 사용자가 입력창에 공백이 아닌 텍스트를 입력했을 때, When "추가" 버튼을
-  누르거나 Enter를 치면, Then `POST /api/todos` 호출 후 목록 맨 끝에 새 항목이 `completed: false`로
-  표시된다. (`TodoInput.tsx`, API 3-2)
-- **AC-FR-001-2**: Given 입력창이 비어 있거나 공백만 있을 때, When 추가를 시도하면, Then 요청이 전송되지
-  않고 "추가" 버튼은 비활성(`disabled`) 상태를 유지한다. (`TodoInput.tsx`)
-- **AC-FR-001-3**: Given 추가에 성공했을 때, When 응답을 받으면, Then 입력창은 비워지고 포커스는 입력창에
-  유지된다.
+`pytest -k ac_fr_008`처럼 요구사항 단위로 골라 실행할 수 있다.
+
+---
+
+## FR-001 — 할 일 추가
+
+- **AC-FR-001-1** `[UI]` Given 목록을 불러온 상태에서, When 입력창에 "운동 30분"을 쓰고 Enter를 누르면, Then 목록 맨 끝에 미완료 상태로 추가되고 입력창이 비워진다.
+- **AC-FR-001-2** `[UI]` Given 입력창이 비었거나 공백만 있을 때, Then "추가" 버튼은 `disabled`이고 Enter를 눌러도 요청이 가지 않는다.
+- **AC-FR-001-3** `[API]` Given 인증된 사용자, When `POST /api/todos {"text": "  운동  "}`, Then 201과 `text: "운동"`, `completed: false`를 받고, `created_at`과 `updated_at`이 같다.
+- **AC-FR-001-4** `[UI]` Given 추가 요청이 실패하면, Then 입력값은 그대로 남고 `role="alert"` 알림이 표시된다.
 
 ## FR-002 — 목록 조회
 
-- **AC-FR-002-1**: Given 로그인한 사용자 A가 ToDo 3건을 생성했을 때, When 다른 기기에서 같은 계정으로
-  로그인해 목록을 조회하면, Then 동일한 3건이 생성 순서(오름차순)대로 표시된다. (API 3-1, DB 2절 인덱스)
-- **AC-FR-002-2**: Given ToDo가 하나도 없을 때, When 목록을 조회하면, Then 빈 배열을 응답받고 프론트는
-  "첫 할 일을 위에 입력해 보세요." 안내 문구를 표시한다. (`App.tsx` empty state)
+- **AC-FR-002-1** `[API]` Given 사용자 A가 "a", "b", "c"를 차례로 만들었을 때, When `GET /api/todos`, Then `items`가 a, b, c 순서다.
+- **AC-FR-002-2** `[API]` Given 할 일이 없는 사용자, When `GET /api/todos`, Then 200과 `{"items": []}`를 받는다.
+- **AC-FR-002-3** `[UI]` Given 할 일이 없을 때, Then 점선 칸 안에 "위 입력창에 첫 할 일을 적고 Enter를 누르세요." 안내가 보인다.
+- **AC-FR-002-4** `[API]` 응답 항목에 `user_id` 필드가 없다.
 
 ## FR-003 — 완료 토글
 
-- **AC-FR-003-1**: Given 미완료 ToDo가 있을 때, When 체크박스를 클릭하면, Then
-  `PATCH /api/todos/{id}` `{completed: true}` 요청이 전송되고 체크박스가 체크되며 텍스트에 취소선이
-  적용된다. (`TodoItem.tsx .is-done`)
-- **AC-FR-003-2**: Given 완료 ToDo가 있을 때, When 체크박스를 다시 클릭하면, Then `completed: false`로
-  되돌아간다.
+- **AC-FR-003-1** `[UI]` Given 미완료 할 일, When 체크박스를 누르면, Then 즉시 체크되고 텍스트에 `--pine` 색 취소선이 생기며 카드 배경이 비워진다(`.is-done`).
+- **AC-FR-003-2** `[API]` When `PATCH {"completed": true}` 후 다시 `{"completed": false}`, Then 각각 200이고 값이 반영된다.
+- **AC-FR-003-3** `[UI]` Given 토글 요청이 실패하면, Then 체크 상태만 원래대로 돌아오고 알림이 표시된다. 텍스트는 바뀌지 않는다.
 
 ## FR-004 — 텍스트 수정
 
-- **AC-FR-004-1**: Given 목록에 ToDo가 있을 때, When "수정" 버튼을 누르면, Then 인라인 편집 입력창이
-  나타나고 기존 텍스트가 채워진 채 자동 포커스된다. (`TodoItem.tsx startEdit`)
-- **AC-FR-004-2**: Given 편집 모드에서 텍스트를 변경했을 때, When "저장"을 누르면, Then
-  `PATCH /api/todos/{id}` `{text}` 요청이 전송되고 성공 시 편집 모드가 종료되며 포커스가 "수정" 버튼으로
-  복귀한다. (NFR-003)
-- **AC-FR-004-3**: Given 편집 모드에서 입력을 모두 지웠을 때, When "저장"을 누르면, Then 요청이 전송되지
-  않고 "저장" 버튼은 비활성 상태를 유지한다.
-- **AC-FR-004-4**: Given 편집 모드일 때, When Esc 키를 누르면, Then 변경 사항이 버려지고 원래 텍스트로
-  복귀하며 포커스가 "수정" 버튼으로 돌아간다. (`cancelEdit`)
+- **AC-FR-004-1** `[UI]` When "수정"을 누르면, Then 기존 텍스트가 채워진 입력창이 나타나고 자동으로 포커스된다.
+- **AC-FR-004-2** `[UI]` Given 편집 중 텍스트를 바꿨을 때, When "저장" 또는 Enter, Then 새 텍스트가 표시되고 편집 모드가 끝난다.
+- **AC-FR-004-3** `[UI]` Given 편집 중, When Esc 또는 "취소", Then 원래 텍스트로 돌아가고 요청은 가지 않는다.
+- **AC-FR-004-4** `[UI]` Given 텍스트를 바꾸지 않고 저장하면, Then 요청 없이 편집 모드만 끝난다.
+- **AC-FR-004-5** `[UI]` Given 편집 입력이 공백뿐이면, Then "저장" 버튼이 `disabled`이고 Enter를 눌러도 편집 모드가 유지된다.
+- **AC-FR-004-6** `[API]` When `PATCH {"text": "새 내용"}`, Then 200이고 `updated_at`이 `created_at`보다 늦다.
 
 ## FR-005 — 삭제
 
-- **AC-FR-005-1**: Given 목록에 ToDo가 있을 때, When "삭제" 버튼을 누르면, Then
-  `DELETE /api/todos/{id}` 요청이 전송되고 성공 시 해당 항목이 목록에서 사라지며 포커스는 새 ToDo
-  입력창으로 이동한다. (NFR-003, `deleteTodo`)
-- **AC-FR-005-2**: Given 이미 삭제된 ToDo에 대해 지연 응답으로 재요청이 발생했을 때, When
-  서버가 `404 NOT_FOUND`를 반환하면, Then 프론트는 해당 항목을 목록에서 제거된 상태로 유지하고 에러를
-  사용자에게 노출하지 않는다(멱등 처리). (NFR-006)
+- **AC-FR-005-1** `[UI]` When "삭제"를 누르면, Then 카드가 바로 사라지고 포커스가 새 할 일 입력창으로 간다.
+- **AC-FR-005-2** `[API]` When `DELETE` 성공 후 같은 id로 다시 `DELETE`, Then 처음은 204, 두 번째는 404 `NOT_FOUND`다.
+- **AC-FR-005-3** `[UI]` Given 서버가 `NOT_FOUND`를 반환하면, Then 카드는 다시 나타나지 않고 알림도 없다.
+- **AC-FR-005-4** `[UI]` Given 삭제가 그 밖의 이유로 실패하면, Then 카드가 원래 위치에 다시 나타나고 알림이 표시된다.
 
-## FR-006 — 완료율 표시
+## FR-006 — 완료율
 
-- **AC-FR-006-1**: Given ToDo가 24개 이하일 때, When 목록이 변경되면, Then `ProgressMeter`는 항목별
-  세그먼트 바를 표시하고 완료된 항목만 `is-done` 색상으로 칠해진다.
-- **AC-FR-006-2**: Given ToDo가 24개를 초과할 때, When 목록이 변경되면, Then 세그먼트 대신 연속형 진행률
-  막대(`meter-fill`, width %)로 전환된다.
-- **AC-FR-006-3**: Given 완료율이 변경될 때, When DOM이 갱신되면, Then `aria-live="polite"` 영역의
-  텍스트(`n개 중 m개 완료`)가 스크린 리더에 공지된다. (NFR-001)
+- **AC-FR-006-1** `[UI]` Given 5개 중 2개 완료, Then "5개 중 2개 완료"와 "40%"가 보이고, 막대는 5칸 중 해당 순서의 2칸이 채워진다.
+- **AC-FR-006-2** `[UI]` Given 할 일이 25개 이상, Then 칸 대신 연속형 막대(`.meter-continuous`)가 표시되고 너비가 완료율과 같다.
+- **AC-FR-006-3** `[UI]` Given 모두 완료, Then "N개 모두 완료했습니다"가 표시된다. Given 0개, Then "아직 할 일이 없습니다"가 표시되고 막대와 퍼센트는 숨겨진다.
+- **AC-FR-006-4** `[UI]` 막대는 `aria-hidden="true"`이고, 문장은 `aria-live="polite"` 영역에 있다.
 
 ## FR-007 — 인증
 
-- **AC-FR-007-1**: Given 로그인하지 않은 사용자가, When `GET/POST/PATCH/DELETE /api/todos*`를 직접
-  호출하면, Then `401 UNAUTHENTICATED` 에러가 반환된다.
-- **AC-FR-007-2**: Given 유효한 Supabase 세션이 만료되었을 때, When ToDo API를 호출하면, Then 401 응답을
-  받고 프론트는 사용자에게 재로그인을 안내한다(구체 UX는 Out-of-scope, 에러 처리만 검증). (NFR-006)
+- **AC-FR-007-1** `[API]` Given `Authorization` 헤더가 없거나 `Basic ...`이거나 `Bearer `(빈 토큰)일 때, When 모든 `/api/todos*` 요청, Then 401 `UNAUTHENTICATED`다.
+- **AC-FR-007-2** `[API]` Given 인증 없이 잘못된 본문으로 `POST`, Then 422가 아니라 401이다(인증 먼저).
+- **AC-FR-007-3** `[API]` Given `AUTH_MODE=prod` 같은 허용되지 않은 값, When 앱을 만들면, Then `RuntimeError`가 난다.
+- **AC-FR-007-4** `[API]` (3단계) Given 만료되었거나 서명이 틀린 JWT, Then 401이다. Given 유효한 JWT, Then `sub`가 `user_id`로 쓰인다.
+- **AC-FR-007-5** `[API]` `GET /api/health`는 인증 없이 200 `{"status": "ok"}`다.
 
-## FR-008 — 사용자별 데이터 격리
+## FR-008 — 소유자 격리
 
-- **AC-FR-008-1**: Given 사용자 A와 B가 각각 ToDo를 가지고 있을 때, When 사용자 A가 목록을 조회하면,
-  Then 사용자 B의 ToDo는 응답에 포함되지 않는다.
-- **AC-FR-008-2**: Given 사용자 A가 사용자 B 소유 ToDo의 id를 알고 있을 때, When A가 해당 id로
-  `PATCH`/`DELETE`를 호출하면, Then `403 FORBIDDEN` 또는 `404 NOT_FOUND`가 반환되고 B의 데이터는
-  변경되지 않는다. (DB RLS 정책 + API 소유자 검사 이중 검증)
+- **AC-FR-008-1** `[API]` Given A와 B가 각각 할 일을 만들었을 때, When A가 `GET`, Then A의 할 일만 받는다.
+- **AC-FR-008-2** `[API]` When B가 A의 할 일에 `PATCH` 또는 `DELETE`, Then 403 `FORBIDDEN`이고 A의 데이터는 바뀌지 않는다.
+- **AC-FR-008-3** `[API]` When 존재하지 않는 UUID로 `PATCH`·`DELETE`, Then 404 `NOT_FOUND`다.
+- **AC-FR-008-4** `[DB]` AC-FR-008-1~3을 `TEST_SUPABASE=1`로 Supabase 저장소에서도 통과한다.
+- **AC-FR-008-5** `[DB]` `anon` 키로 `/rest/v1/todos`를 조회하면 거부되거나 0건이다.
 
-## FR-009 — 영속성
+## FR-009 — 영속 저장
 
-- **AC-FR-009-1**: Given 로그인한 사용자가 ToDo를 생성/수정/삭제/토글했을 때, When 브라우저를
-  새로고침하면, Then 변경된 최종 상태가 그대로 유지된다(React state 초기화와 무관).
-- **AC-FR-009-2**: Given 동일 계정으로 다른 브라우저 세션에서 접속했을 때, When 목록을 조회하면, Then
-  최신 상태가 동일하게 반영된다.
+- **AC-FR-009-1** `[UI]` (2단계 이후) Given 할 일을 추가·토글·수정한 뒤, When 새로고침하면, Then 같은 목록과 상태가 보인다.
+- **AC-FR-009-2** `[DB]` When 백엔드 프로세스를 재시작한 뒤 `GET`, Then 이전 데이터가 그대로다.
+- **AC-FR-009-3** `[DB]` `UPDATE` 시 트리거로 `updated_at`이 갱신된다.
 
-## FR-010 — 서버 측 입력 검증
+## FR-010 — 서버 입력 검증
 
-- **AC-FR-010-1**: Given `text`가 공백만으로 구성된 생성/수정 요청이, When 서버에 도달하면, Then
-  `422 VALIDATION_ERROR`가 반환되고 DB에 반영되지 않는다(프론트 검증 우회 시나리오 포함, 예: API 직접
-  호출).
-- **AC-FR-010-2**: Given `text` 길이가 500자를 초과하는 요청이, When 서버에 도달하면, Then
-  `422 VALIDATION_ERROR`가 반환된다.
+- **AC-FR-010-1** `[API]` `text`가 `""`, `"   "`, `"\n\t"`이면 422 `VALIDATION_ERROR`이고, `details`에 `field: "text"`가 있다.
+- **AC-FR-010-2** `[API]` 공백 제거 후 500자는 성공, 501자는 422다. 한글과 이모지도 코드 포인트 1개를 1자로 센다.
+- **AC-FR-010-3** `[API]` `text`가 숫자·`null`·배열이거나 `completed`가 `"true"`(문자열)이면 422다.
+- **AC-FR-010-4** `[API]` `PATCH {}`, 정의되지 않은 필드(`{"done": true}`), 잘못된 UUID 경로는 모두 422다.
+- **AC-FR-010-5** `[DB]` SQL로 공백만 있는 텍스트나 501자 텍스트를 직접 INSERT하면 check 제약 위반으로 거부된다.
+
+## FR-011 — 로딩·오류 상태
+
+- **AC-FR-011-1** `[UI]` Given 첫 조회 응답 전, Then 로딩 상태가 표시되고 "추가" 버튼은 비활성화된다.
+- **AC-FR-011-2** `[UI]` Given 백엔드가 꺼져 있을 때, Then "서버에 연결할 수 없습니다." 메시지와 "다시 시도" 버튼이 보인다. 백엔드를 켜고 "다시 시도"를 누르면 목록이 표시된다.
+- **AC-FR-011-3** `[UI]` 개별 동작 실패 알림은 `role="alert"`로 스크린 리더에 전달된다.
+
+## FR-012 — 마감일
+
+- **AC-FR-012-1** `[API]` When `POST {"text": "보고서", "due_date": "2026-11-25"}`, Then 201이고 응답의 `due_date`가 `"2026-11-25"`다. `due_date`를 생략하거나 `null`이면 응답은 `"due_date": null`이다.
+- **AC-FR-012-2** `[API]` Given 마감일이 있는 할 일, When `PATCH {"due_date": "2026-12-01"}`, Then 마감일만 바뀌고 `text`, `completed`는 그대로다. When `PATCH {"due_date": null}`, Then 마감일이 지워진다.
+- **AC-FR-012-3** `[API]` Given 마감일이 있는 할 일, When `due_date` 없이 `PATCH {"completed": true}` 또는 `{"text": "..."}`, Then 마감일은 유지된다.
+- **AC-FR-012-4** `[API]` `due_date`가 `"2026-02-30"`, `"2026/11/25"`, `"20261125"`, `"2026-11-25T09:00:00"`, `20261125`(숫자), `"1999-12-31"`, `"2101-01-01"`이면 422 `VALIDATION_ERROR`이고 `details`에 `field: "due_date"`가 있다.
+- **AC-FR-012-5** `[UI]` 추가 폼에 "마감일 (선택)" 라벨이 연결된 `<input type="date">`가 있다. 날짜를 고르고 추가하면 카드에 "M월 D일 마감"이 표시되고, 추가 후 날짜 입력은 비워진다.
+- **AC-FR-012-6** `[UI]` 편집 모드에서 마감일을 바꾸고 저장하면 카드 표시가 바뀐다. "마감일 지우기"를 누르고 저장하면 표시가 사라진다. 텍스트와 마감일이 모두 그대로면 요청을 보내지 않는다.
+- **AC-FR-012-7** `[UI]` 마감일이 오늘이면 "오늘 마감", 지났고 미완료면 "N일 지남"(`--danger`)으로 표시된다. 완료된 할 일은 지났어도 강조하지 않는다.
+- **AC-FR-012-8** `[UI]` 마감일 수정 요청이 실패하면 마감일만 서버 확인 값으로 돌아가고 알림이 표시된다 (NFR-006).
+
+## FR-013 — 카테고리
+
+- **AC-FR-013-1** `[API]` When `POST {"text": "보고서", "category": "work"}`, Then 201이고 응답의 `category`가 `"work"`다. `category`를 생략하면 `"personal"`이다.
+- **AC-FR-013-2** `[API]` Given 할 일, When `PATCH {"category": "study"}`, Then 카테고리만 바뀌고 `text`, `completed`, `due_date`는 그대로다. `category` 없이 다른 필드만 PATCH하면 카테고리는 유지된다.
+- **AC-FR-013-3** `[API]` `category`가 `"Work"`, `""`, `"etc"`, `1`, `["work"]`, `null`이면 POST와 PATCH 모두 422 `VALIDATION_ERROR`이고 `details`에 `field: "category"`가 있다.
+- **AC-FR-013-4** `[UI]` 추가 폼에 "카테고리" 라벨이 연결된 `<select>`(업무·개인·학습)가 있고 기본값은 "개인"이다. 고른 카테고리로 추가되고 카드에 카테고리 이름이 표시된다.
+- **AC-FR-013-5** `[UI]` 편집 모드에서 카테고리를 바꾸고 저장하면 카드 표시가 바뀐다. 텍스트·마감일·카테고리가 모두 그대로면 요청을 보내지 않는다. 카테고리 수정이 실패하면 카테고리만 서버 확인 값으로 돌아가고 알림이 표시된다 (NFR-006).
+
+## FR-014 — 카테고리 필터
+
+- **AC-FR-014-1** `[API]` Given 업무 2개·학습 1개, When `GET /api/todos?category=work`, Then 업무 2개만 생성 순서로 반환한다. 파라미터가 없으면 3개 모두 반환한다.
+- **AC-FR-014-2** `[API]` 다른 사용자의 같은 카테고리 할 일은 필터 결과에 섞이지 않는다 (FR-008).
+- **AC-FR-014-3** `[API]` `?category=etc`, `?category=`이면 422 `VALIDATION_ERROR`이고 `details[0].field`는 `"category"`다. 인증이 없으면 401이 먼저다.
+- **AC-FR-014-4** `[UI]` 목록 위에 "카테고리 필터" 그룹의 버튼 4개(전체·업무·개인·학습)가 있고, 각 버튼에 개수가 표시된다. 선택된 버튼은 `aria-pressed="true"`다. 기본은 "전체"다.
+- **AC-FR-014-5** `[UI]` 필터를 고르면 그 카테고리 카드만 보이고, 완료율 문장도 보이는 카드 기준으로 바뀐다. 해당 카테고리에 할 일이 없으면 "<카테고리> 할 일이 없습니다." 빈 상태가 보인다. "전체"를 고르면 모든 카드가 다시 보인다.
+- **AC-FR-014-6** `[UI]` 필터가 "학습"일 때 추가 폼의 카테고리 기본값은 "학습"이다. 편집으로 카테고리를 바꿔 현재 필터에서 빠지면 카드가 사라지고 포커스는 새 할 일 입력창으로 간다.
+
+---
 
 ## NFR-001 — 접근성
 
-- **AC-NFR-001-1**: Given 스크린 리더 사용자가 목록을 탐색할 때, When 체크박스에 포커스하면, Then 연결된
-  `<label>`의 텍스트가 읽힌다(네이티브 `<input type="checkbox">` + `appearance: none` 유지).
-- **AC-NFR-001-2**: Given 키보드만 사용하는 사용자가, When Tab으로 "수정"/"삭제" 버튼에 포커스하면, Then
-  각 버튼의 `aria-label`이 할 일 내용을 포함해 모호하지 않게 안내된다.
+- **AC-NFR-001-1** `[UI]` 체크박스는 `<input type="checkbox">`이고, 작업 텍스트 `<label for>`와 연결되어 텍스트를 눌러도 토글된다.
+- **AC-NFR-001-2** `[UI]` 수정·삭제 버튼의 `aria-label`이 `"<텍스트>" 수정`, `"<텍스트>" 삭제` 형식이다.
 
 ## NFR-002 — 반응형
 
-- **AC-NFR-002-1**: Given 뷰포트 폭이 360px 이상일 때, When 카드가 렌더링되면, Then 수정/삭제 버튼이
-  텍스트와 한 줄에 표시된다.
-- **AC-NFR-002-2**: Given 뷰포트 폭이 359px 이하일 때, When 카드가 렌더링되면, Then 수정/삭제 버튼이 다음
-  줄로 줄바꿈된다(`@media (max-width: 359px)`).
+- **AC-NFR-002-1** `[UI]` 너비 360px 이상에서 수정·삭제 버튼이 텍스트와 같은 줄에 있다.
+- **AC-NFR-002-2** `[UI]` 너비 340px에서 버튼이 다음 줄 오른쪽에 있고, 가로 스크롤이 없다(`scrollWidth <= innerWidth`).
+- **AC-NFR-002-3** `[UI]` `pointer: coarse` 환경에서 버튼 높이가 44px 이상이다.
 
 ## NFR-003 — 포커스 관리
 
-- (AC-FR-004-2, AC-FR-004-4, AC-FR-005-1에 통합 기술됨 — 중복 작성하지 않음)
+- **AC-NFR-003-1** `[UI]` 편집을 저장하거나 Esc로 취소하면, 해당 작업의 "수정" 버튼에 포커스가 있다.
+- **AC-NFR-003-2** `[UI]` 삭제 후 `document.activeElement`가 `#new-todo`다.
+- **AC-NFR-003-3** `[UI]` "추가" 버튼을 키보드(Tab → Enter)나 마우스로 눌러 추가한 뒤에도 포커스가 `#new-todo`에 있다.
+- **AC-NFR-003-4** `[UI]` Tab 순서는 입력창 → (추가) → 작업마다 체크박스 → 수정 → 삭제이고, 모든 요소에 3px `--focus` 외곽선이 보인다.
 
 ## NFR-004 — 보안
 
-- **AC-NFR-004-1**: Given 저장소 전체를 검색할 때, When `SUPABASE_SERVICE_ROLE_KEY` 문자열을 찾으면,
-  Then 프론트엔드 번들/커밋된 소스에 해당 값이 하드코딩되어 있지 않아야 한다(환경변수로만 주입).
-- **AC-NFR-004-2**: Given `Authorization` 헤더가 없는 요청이, When 어떤 `/api/todos*` 엔드포인트든
-  호출하면, Then 비즈니스 로직 실행 전에 401로 차단된다(미들웨어/의존성 주입 단계에서 처리 확인).
+- **AC-NFR-004-1** `[API]` `SUPABASE_URL`과 `SUPABASE_SECRET_KEY` 중 하나만 있으면 앱 생성 시 `RuntimeError`다. `VERCEL=1`인데 둘 다 없어도 `RuntimeError`다.
+- **AC-NFR-004-2** 프론트 빌드 결과(`frontend/dist`)에 `sb_secret_` 문자열이 없다.
+- **AC-NFR-004-3** `[API]` 저장소 오류 시 500 응답 본문에 SQL, 스택 트레이스, 키가 없다.
+- **AC-NFR-004-4** 공개 배포 환경의 `AUTH_MODE`는 `supabase`다.
 
 ## NFR-005 — 배포
 
-- **AC-NFR-005-1**: Given Vercel 프로젝트 설정이 완료된 상태에서, When 프론트엔드를 배포하면, Then
-  `VITE_API_BASE_URL` 환경변수를 통해 배포된 FastAPI 엔드포인트와 통신한다.
+- **AC-NFR-005-1** 배포된 백엔드 `GET /api/health`가 200이고, 배포된 프론트에서 CRUD 5가지가 동작한다.
 
-## NFR-006 — 에러 처리
+## NFR-006 — 오류 처리와 일관성
 
-- **AC-NFR-006-1**: Given 네트워크 오류로 `POST /api/todos`가 실패했을 때, When 프론트가 낙관적으로
-  목록에 항목을 먼저 추가했다면, Then 실패 확인 즉시 해당 항목을 롤백하고 사용자에게 실패를 알린다.
+- **AC-NFR-006-1** `[API]` 401·403·404·422·500 응답이 모두 `{error: {code, message, details}}` 형식이다.
+- **AC-NFR-006-2** `[UI]` 토글 요청이 실패하기 전에 사용자가 같은 체크박스를 다시 눌렀다면, 실패 응답이 와도 사용자의 마지막 선택을 덮어쓰지 않는다.
 
 ## NFR-007 — 성능
 
-- **AC-NFR-007-1**: Given ToDo 200건을 가진 계정으로, When `GET /api/todos`를 호출하면, Then p95
-  응답 시간이 500ms 이하다(측정은 TASKS의 부하 테스트 작업에서 수행).
+- **AC-NFR-007-1** `[DB]` 할 일 500건인 사용자의 `GET /api/todos`를 20회 호출했을 때 p95가 500ms 이하다.
+
+## NFR-008 — 디자인 일관성
+
+- **AC-NFR-008-1** `[UI]` `src/index.css`에서 `:root`와 다크 모드 블록 밖에는 16진수 색상값이 없다.
+- **AC-NFR-008-2** `[UI]` 로딩·오류 UI 등 새 요소도 기존 토큰과 버튼 변형을 쓰고, 다크 모드에서 확인된다.
+
+## NFR-009 — 품질 게이트
+
+- **AC-NFR-009-1** `npm run build` 성공, `npm run lint` 경고 0건.
+- **AC-NFR-009-2** `pytest` 전체 통과. FR-001~FR-010의 `[API]` 기준마다 대응 테스트가 하나 이상 있다.
